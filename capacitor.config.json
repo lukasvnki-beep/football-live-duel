@@ -1,0 +1,11 @@
+{
+  "appId": "app.footballliveduel",
+  "appName": "Live Duel",
+  "webDir": "www",
+  "server": {
+    "url": "https://football-live-duel.vercel.app",
+    "errorPath": "index.html"
+  },
+  "ios": { "contentInset": "never", "backgroundColor": "#08111e" },
+  "android": { "backgroundColor": "#08111e" }
+}

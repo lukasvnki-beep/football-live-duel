@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Live Duel</string>
+    <string name="title_activity_main">Live Duel</string>
+    <string name="package_name">app.footballliveduel</string>
+    <string name="custom_url_scheme">app.footballliveduel</string>
+</resources>
