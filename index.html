@@ -207,6 +207,26 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:0 auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 .livebar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.powers{display:grid;gap:10px}
+.pw{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pw h3{font-size:1rem;text-transform:uppercase;color:var(--muted)}
+.pwbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pwb{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);min-width:0}
+.pwb b{font-size:.9rem}
+.pwb span{font-size:.72rem;color:var(--muted)}
+.pwb .st{color:var(--text);font-weight:600;margin-top:2px}
+.pwb.double:not([disabled]){border-color:var(--gold)}
+.pwb.neg:not([disabled]){border-color:var(--red)}
+.pwb.on.double{background:rgba(255,215,124,.15);border-color:var(--gold)}
+.pwb.on.neg{background:rgba(255,107,107,.15);border-color:var(--red)}
+.pwb[disabled]{cursor:default}
+.pwb[disabled]:not(.on){opacity:.55}
+.pwpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.85rem}
+.pwpick>span{width:100%;color:var(--muted)}
+.tag{font-style:normal;display:inline-block;margin-left:4px;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:999px;vertical-align:1px}
+.tag.double{background:rgba(255,215,124,.2);color:var(--gold)}
+.tag.neg{background:rgba(255,107,107,.2);color:var(--red)}
+.brow.pwr span:first-child{color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -385,6 +405,12 @@ function viewHome(){
         <span>Yellow card</span><span class="neg">−3</span>
         <span>Red card (second yellow adds −5)</span><span class="neg">−8</span>
       </div>
+      <h3 style="margin-top:14px">Power-ups</h3>
+      <div class="ptable">
+        <span>⚡ Double Points: everything your chosen player earns counts double</span><span>10 min</span>
+        <span>☠ Negative Points: everything one of your rival's players earns counts as minus</span><span>5 min</span>
+      </div>
+      <p class="small muted" style="margin:10px 0 0">Each of you gets one of each per match. Use them while the ball is in play. Timing is in match minutes.</p>
       <p class="small muted" style="margin:10px 0 0">Both of you can pick the same player. Pick before kickoff. Practice matches score goals, assists and cards only. Finished real matches are replayed minute by minute.</p>
     </div>
   </section>`;
@@ -509,10 +535,80 @@ function viewPass(){
 }
 
 // ================= Reveal =================
-function lineupCard(i,pts){
+function lineupCard(i,pts,a){
   const off=S.eng?S.eng.sentOff:new Set();
+  const act=S.eng?activePowers():[];
   return `<div class="lu"><h3>${esc(pname(i))}</h3>${S.picks[i].map(id=>{const p=PL[id];const o=off.has(id);
-    return `<div class="pp ${o?'off':''}">${crest(p.team)}<div class="nm">${esc(p.name)}<span>${p.pos||'–'} · ${esc(TEAMS[p.team].short)}${o?' · sent off':''}</span></div>${pts?`<div class="pts num">${pts[id]||0}</div>`:''}</div>`}).join('')}</div>`;
+    const tags=act.filter(x=>x.p.target===id&&(x.p.type==='double'?x.p.owner===i:x.p.owner!==i)).map(x=>`<i class="tag ${x.p.type}">${x.p.type==='double'?'×2':'FLIP'} ${x.left}′</i>`).join('');
+    const v=pts?(pts[id]||0)+(a?(a.adj[i][id]||0):0):0;
+    return `<div class="pp ${o?'off':''}">${crest(p.team)}<div class="nm">${esc(p.name)}${tags}<span>${p.pos||'–'} · ${esc(TEAMS[p.team].short)}${o?' · sent off':''}</span></div>${pts?`<div class="pts num">${v}</div>`:''}</div>`}).join('')}</div>`;
+}
+
+// ================= Power-ups =================
+const POWER={double:{dur:10,label:'Double Points',icon:'⚡'},neg:{dur:5,label:'Negative Points',icon:'☠'}};
+function resetPowers(){S.powers=[];S.pwPick=null;S.pwFeed=[];const r=(a,b)=>a+Math.floor(Math.random()*(b-a));S.cpuPlan={double:r(12,70),neg:r(15,78)}}
+resetPowers();
+function nowMin(E){if(E.kind==='sim')return E.cursor+1;if(E.replay&&!E.final)return E.cursor;return E.elapsed||0}
+function inPlay(E){
+  if(!E||E.done||E.final)return false;
+  const c=E.clock();if(c.status==='Half time')return false;
+  if(E.kind==='sim')return E.cursor>=0;
+  if(!E.data)return false;
+  return E.replay?E.cursor>0:LIVE.has(E.status)&&E.status!=='HT'&&E.status!=='P';
+}
+function activePowers(){const E=S.eng;if(!E||E.final)return [];const now=nowMin(E);
+  return S.powers.map(p=>({p,left:p.from+POWER[p.type].dur-now})).filter(x=>x.left>0)}
+function activatePower(owner,type,target){
+  const E=S.eng;if(!inPlay(E)||S.powers.some(p=>p.owner===owner&&p.type===type))return;
+  const shown=E.shown();const from=nowMin(E);
+  S.powers.push({owner,type,target,from,seen:shown.map(e=>e.ord)});
+  const maxOrd=Math.max(from,...shown.map(e=>e.ord||0),...S.pwFeed.map(e=>e.ord));
+  S.pwFeed.push({ord:maxOrd+0.0001,el:from,lbl:E.clock().min,type:'power',owner,ptype:type,player:target,team:PL[target].team,pts:{}});
+  if(E.kind==='real'&&!E.replay)saveActive();
+}
+function powerAdjust(){
+  const E=S.eng,adj=[{},{}],per=S.powers.map(()=>0);
+  if(!E||!S.powers.length)return {adj,per};
+  E.shown().filter(e=>!e.spread&&e.el!=null).forEach(e=>{for(const id in e.pts){const v=e.pts[id];if(!v)continue;
+    [0,1].forEach(side=>{
+      const act=S.powers.map((p,k)=>[p,k]).filter(([p])=>p.target===id&&(p.type==='double'?p.owner===side:p.owner!==side)&&e.el>=p.from&&e.el<p.from+POWER[p.type].dur&&!p.seen.includes(e.ord));
+      if(!act.length)return;
+      let val=v;const dbl=act.find(([p])=>p.type==='double'),neg=act.find(([p])=>p.type==='neg');
+      if(dbl){val=v*2;per[dbl[1]]+=v}
+      if(neg&&val>0){per[neg[1]]-=2*val;val=-val}
+      adj[side][id]=(adj[side][id]||0)+val-v;
+    })}});
+  // Replays get full-match stats only at the end, so spread them evenly over the minutes the player was on the pitch
+  if(E.kind==='real'&&E.replay&&E.final){
+    S.powers.forEach((p,k)=>{const st=E.stats[p.target];if(!st||!st.minutes)return;const sp=statPoints(st);if(!sp)return;
+      const sub=E.events.find(e=>e.type==='sub'&&(e.assist===p.target||e.player===p.target));
+      const start=sub&&Math.abs((90-sub.el)-st.minutes)<Math.abs(sub.el-st.minutes)?sub.el:0,end=start+st.minutes;
+      const ov=Math.max(0,Math.min(end,p.from+POWER[p.type].dur)-Math.max(start,p.from));if(!ov)return;
+      const v=Math.round(sp*ov/st.minutes);
+      const d=p.type==='double'?v:(v>0?-2*v:0);if(!d)return;
+      const side=p.type==='double'?p.owner:1-p.owner;per[k]+=d;adj[side][p.target]=(adj[side][p.target]||0)+d});
+  }
+  return {adj,per};
+}
+function cpuPowers(){
+  const E=S.eng;if(S.mode!=='cpu'||!inPlay(E))return;const now=nowMin(E);
+  ['double','neg'].forEach(type=>{
+    if(S.powers.some(p=>p.owner===1&&p.type===type)||now<S.cpuPlan[type])return;
+    const pool=(type==='double'?S.picks[1]:S.picks[0]).filter(id=>!E.sentOff.has(id));if(!pool.length)return;
+    const w={FWD:3,MID:2,DEF:1,GK:.5,'':1};const t=pickWeighted(pool.map(id=>PL[id]),p=>w[p.pos]||1);
+    activatePower(1,type,t.id);
+  });
+}
+function powersHtml(){
+  const E=S.eng,now=nowMin(E),ok=inPlay(E);
+  return [0,1].map(i=>{const cpu=S.mode==='cpu'&&i===1;
+    return `<div class="pw"><h3>${esc(pname(i))} · power-ups</h3><div class="pwbtns">${['double','neg'].map(type=>{
+      const used=S.powers.find(p=>p.owner===i&&p.type===type),P=POWER[type];
+      const left=used?used.from+P.dur-now:0,on=used&&left>0&&!E.final;
+      const state=used?(on?`Active on ${esc(PL[used.target].name)} · ${left}′ left`:`Used on ${esc(PL[used.target].name)}`):cpu?'The computer picks its moment':ok?'Tap to use':'Use while the ball is in play';
+      return `<button class="pwb ${type} ${on?'on':''}" data-pw="${i}:${type}" ${used||cpu||!ok?'disabled':''}><b>${P.icon} ${P.label}</b><span>${type==='double'?'One of your players · 10 min':'One of their players · 5 min'}</span><span class="st">${state}</span></button>`}).join('')}</div>
+      ${S.pwPick&&S.pwPick.owner===i?`<div class="pwpick"><span>${S.pwPick.type==='double'?'Double the points of which of your players?':'Flip the points of which of their players?'}</span>${S.picks[S.pwPick.type==='double'?i:1-i].map(id=>`<button class="ctl" data-pwt="${id}">${esc(PL[id].name)}</button>`).join('')}<button class="linkbtn" data-pwx="1">Cancel</button></div>`:''}
+    </div>`}).join('');
 }
 function viewReveal(){
   const f=S.fixture;
@@ -534,7 +630,7 @@ function viewReveal(){
   <div class="actionbar"><div><button class="btn" id="ko">${f.kind==='sim'?'Kick off':replay?'Start replay':'Follow live'}</button></div></div>`;
   document.getElementById('back').onclick=()=>go('home');
   document.getElementById('ko').onclick=()=>{
-    S.speed=1;S.paused=false;
+    S.speed=1;S.paused=false;resetPowers();
     if(f.kind==='sim'){S.eng=simEngine(f);go('live');startTimer()}
     else{S.eng=realEngine(f,replay);saveActive();go('live');S.eng.start()}
   };
@@ -542,12 +638,12 @@ function viewReveal(){
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
   store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id])});
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
   Object.assign(TEAMS,a.teams);a.players.forEach(p=>{if(!PL[p.id])PL[p.id]=p});
-  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;
+  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status));go('live');S.eng.start();
@@ -589,6 +685,7 @@ function simEngine(f){
       sentOff.add(pl.id);events.push({idx,lbl,type:'red',team,player:pl.id,pts:{[pl.id]:POINTS.red}});
     }
   });
+  events.forEach((e,i)=>{e.el=e.idx+1;e.ord=e.idx+1+i/10000});
   const E={kind:'sim',cursor:-1,htWait:0,done:false,sentOff:new Set(),
     shown(){return events.filter(e=>e.idx<=E.cursor)},
     clock(){const ht=E.cursor===45+st1-1&&E.htWait>0;return {min:E.cursor<0?'0′':minutes[E.cursor]?label(minutes[E.cursor].half,minutes[E.cursor].m):'FT',status:S.paused?'Paused':ht?'Half time':E.cursor<0?'Kickoff':E.cursor<=45+st1-1?'1st half':'2nd half',live:!S.paused&&!ht}},
@@ -717,7 +814,7 @@ function realEngine(f,replay){
     },
     finish(){
       E.final=true;E.done=true;E.cursor=E.maxMin;
-      if(E.replay){picked().forEach(id=>{const st=E.stats[id];if(!st)return;const parts=statParts(st);if(parts.length)E.statFeed.push({ord:999,el:E.maxMin,lbl:'FT',type:'stats',team:PL[id].team,player:id,text:'Full-match stats: '+parts.map(([n,v])=>`${v} ${n}`).join(', '),pts:{[id]:statPoints(st)}})})}
+      if(E.replay){picked().forEach(id=>{const st=E.stats[id];if(!st)return;const parts=statParts(st);if(parts.length)E.statFeed.push({ord:999,el:E.maxMin,spread:true,lbl:'FT',type:'stats',team:PL[id].team,player:id,text:'Full-match stats: '+parts.map(([n,v])=>`${v} ${n}`).join(', '),pts:{[id]:statPoints(st)}})})}
       E.sentOff=new Set(E.events.filter(e=>e.type==='red'||e.type==='second').map(e=>e.player));
     },
     async start(){
@@ -749,7 +846,7 @@ function tick(){
   if(E.done){finishDuel();return}
   updateLive(before);
 }
-function totals(){const t=S.eng.tally();return S.picks.map(ps=>ps.reduce((s,id)=>s+(t.pp[id]||0),0))}
+function totals(){const t=S.eng.tally(),a=powerAdjust();return S.picks.map((ps,i)=>ps.reduce((s,id)=>s+(t.pp[id]||0)+(a.adj[i][id]||0),0))}
 function finishDuel(){
   stopTimer();const E=S.eng;if(!E.done)E.finish();
   if(E.saved)return;E.saved=true;E.stop();
@@ -775,6 +872,7 @@ function evText(e){
     case 'var':return `<span class="ico" style="background:var(--gold)"></span><b>VAR: goal ruled out.</b> ${nm}'s goal at ${e.ref.lbl} is cancelled and the points are taken back.`;
     case 'varinfo':return `<span class="ico" style="background:var(--gold)"></span>VAR: ${esc(e.text)}${p?' ('+nm+')':''}`;
     case 'sub':return `<span class="ico" style="background:var(--panel2);border:1px solid var(--line)"></span>Substitution ${tn}: ${nm}${e.assist?' ⇄ '+esc(PL[e.assist].name):''}`;
+    case 'power':return `<span class="ico" style="background:${e.ptype==='double'?'var(--gold)':'var(--red)'};border-radius:50%;width:12px;height:12px"></span><b>${esc(pname(e.owner))}</b> used <b>${POWER[e.ptype].icon} ${POWER[e.ptype].label}</b> on ${nm} for ${POWER[e.ptype].dur} min`;
     case 'stats':return `${dot('var(--gold)')}<b>${nm}</b>: ${esc(e.text)}`;
   }
   return '';
@@ -795,6 +893,7 @@ function viewLive(){
     :`<div class="livebar"><span id="fresh">Loading…</span><button class="ctl" id="refresh">Refresh now</button></div>`}
     <div id="errbox"></div>
     <div class="lineups" id="lineups"></div>
+    <div class="powers" id="powers"></div>
     <div class="section-title"><h2 style="font-size:1.2rem">Match feed</h2><span class="small muted">${E.kind==='sim'?'Simulated':'API-Football'}</span></div>
     <div class="feed" id="feed"></div>
   </section>`;
@@ -804,12 +903,21 @@ function viewLive(){
     app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{S.speed=+b.dataset.s;app.querySelectorAll('[data-s]').forEach(x=>x.setAttribute('aria-pressed',x===b));startTimer()});
     document.getElementById('skip').onclick=()=>{if(E.kind==='real'&&!E.data)return;finishDuel()};
   }else document.getElementById('refresh').onclick=()=>E.refresh();
+  document.getElementById('powers').onclick=ev=>{
+    const b=ev.target.closest('button');if(!b||b.disabled)return;
+    if(b.dataset.pw){const [o,t]=b.dataset.pw.split(':');S.pwPick={owner:+o,type:t};if(timed&&!S.paused){S.paused=true;S.pwPaused=true}}
+    else if(b.dataset.pwt){const pk=S.pwPick;S.pwPick=null;activatePower(pk.owner,pk.type,b.dataset.pwt);if(S.pwPaused){S.paused=false;S.pwPaused=false}}
+    else if(b.dataset.pwx){S.pwPick=null;if(S.pwPaused){S.paused=false;S.pwPaused=false}}
+    const pb=document.getElementById('pause');if(pb)pb.textContent=S.paused?'Play':'Pause';
+    updateLive();
+  };
   updateLive();
 }
 let freshT=null;
 function updateLive(before){
   const E=S.eng,f=S.fixture;if(!document.getElementById('board'))return;
-  const t=E.tally(),tot=totals(),c=E.clock();
+  cpuPowers();
+  const t=E.tally(),a=powerAdjust(),tot=totals(),c=E.clock();
   const lead=tot[0]>tot[1]?0:tot[1]>tot[0]?1:-1;
   document.getElementById('board').innerHTML=`<div class="row">
     <div class="${lead===0?'lead':''}"><div class="who">${esc(pname(0))}</div><div class="big" id="s0">${tot[0]}</div></div>
@@ -817,11 +925,12 @@ function updateLive(before){
     <div class="${lead===1?'lead':''}"><div class="who">${esc(pname(1))}</div><div class="big" id="s1">${tot[1]}</div></div></div>
     <div class="matchscore">${crest(f.home)}<span>${esc(TEAMS[f.home].short)}</span><span class="s">${t.hs} – ${t.as}</span><span>${esc(TEAMS[f.away].short)}</span>${crest(f.away)}</div>`;
   if(before)[0,1].forEach(i=>{if(before[i]!==tot[i])document.getElementById('s'+i).classList.add('bump')});
-  document.getElementById('lineups').innerHTML=lineupCard(0,t.pp)+lineupCard(1,t.pp);
+  document.getElementById('lineups').innerHTML=lineupCard(0,t.pp,a)+lineupCard(1,t.pp,a);
+  document.getElementById('powers').innerHTML=powersHtml();
   const eb=document.getElementById('errbox');
   eb.innerHTML=E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'';
   const picked=new Set([...S.picks[0],...S.picks[1]]);
-  const ev=E.shown().slice().reverse();
+  const ev=[...E.shown(),...S.pwFeed].sort((x,y)=>y.ord-x.ord);
   document.getElementById('feed').innerHTML=ev.length?ev.map(e=>{const mine=Object.keys(e.pts).some(k=>picked.has(k)&&e.pts[k]);
     return `<div class="ev ${mine?'mine':''} ${e.type==='var'?'void':''}"><span class="m">${esc(e.lbl)}</span><span class="txt">${evText(e)}</span><span class="chips">${chips(e)}</span></div>`}).join('')
     :`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':E.kind==='real'&&!E.replay&&!LIVE.has(E.status)&&!FINAL.has(E.status)?'Waiting for kickoff. Goals, cards and stat updates will show up here.':'Goals, assists and cards will show up here as they happen.'}</div>`;
@@ -835,10 +944,12 @@ function updateLive(before){
 
 // ================= Result =================
 function viewResult(){
-  const f=S.fixture,E=S.eng,t=E.tally(),tot=totals();
+  const f=S.fixture,E=S.eng,t=E.tally(),a=powerAdjust(),tot=totals();
   const w=tot[0]>tot[1]?0:tot[1]>tot[0]?1:-1;
-  const lines=i=>S.picks[i].map(id=>{const p=PL[id];const why=E.why(id);
-    return `<div class="brow"><span>${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${t.pp[id]||0}</b><span class="why">${why.length?esc(why.join(' · ')):'No scoring events'}</span></div>`}).join('');
+  const lines=i=>S.picks[i].map(id=>{const p=PL[id];const why=E.why(id);const adj=a.adj[i][id]||0;
+    if(adj)why.push(`power-ups ${sign(adj)}`);
+    return `<div class="brow"><span>${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${(t.pp[id]||0)+adj}</b><span class="why">${why.length?esc(why.join(' · ')):'No scoring events'}</span></div>`}).join('')
+    +S.powers.map((p,k)=>p.owner!==i?'':`<div class="brow pwr"><span>${POWER[p.type].icon} ${POWER[p.type].label} on ${esc(PL[p.target].name)}</span><b class="num">${a.per[k]?sign(a.per[k]):'0'}</b><span class="why">Used at ${p.from}′ for ${POWER[p.type].dur} min${p.type==='neg'?`, changed ${esc(pname(1-i))}'s score`:''}</span></div>`).join('');
   app.innerHTML=`<section class="screen">
     <div class="result">
       <div class="trophy" aria-hidden="true">${w===-1?'🤝':'🏆'}</div>
