@@ -54,6 +54,7 @@ function view(d, slot) {
     players: (both || i === slot) ? p.players || [] : [],
     dare: (both || i === slot) ? p.dare || '' : '',
     dareOk: !!p.dareOk,
+    capt: (both || i === slot) ? (p.capt === 1 ? 1 : 0) : 0,
   });
   return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, chat: slot >= 0 ? d.chat : [] };
 }
@@ -128,8 +129,8 @@ export default async function handler(req, res) {
       if (me.ready) return res.status(409).json({ error: 'Your picks are already locked.' });
       const picks = (Array.isArray(b.picks) ? b.picks : []).map(x => clean(x, 24)).filter(Boolean).slice(0, 2);
       if (picks.length !== 2) return res.status(400).json({ error: 'Pick exactly 2 players.' });
-      const players = (Array.isArray(b.players) ? b.players : []).slice(0, 2).map(p => ({ id: clean(p.id, 24), team: clean(p.team, 12), name: clean(p.name, 60), pos: clean(p.pos, 4) }));
-      const upd = { ...me, picks, players, dare: clean(b.dare, 120), ready: true };
+      const players = (Array.isArray(b.players) ? b.players : []).slice(0, 2).map(p => ({ id: clean(p.id, 24), team: clean(p.team, 12), name: clean(p.name, 60), pos: clean(p.pos, 4), num: clean(p.num, 3) }));
+      const upd = { ...me, picks, players, dare: clean(b.dare, 120), capt: b.capt === 1 ? 1 : 0, ready: true };
       await redis([['SET', k + ':p' + slot, JSON.stringify(upd), 'KEEPTTL']]);
     } else if (b.action === 'consent') {
       // Accept or refuse the forfeit the OTHER player proposed for me
@@ -162,14 +163,21 @@ export default async function handler(req, res) {
       const start = { el: Math.max(0, Math.min(130, Number(s.el) || 0)), keys: (Array.isArray(s.keys) ? s.keys : []).slice(0, 200).map(x => clean(x, 60)), base };
       await redis([['SET', k + ':start', JSON.stringify(start), 'EX', String(TTL), 'NX']]);
     } else if (b.action === 'power') {
-      const type = b.type === 'double' ? 'double' : b.type === 'neg' ? 'neg' : null;
+      // Power-ups (double, neg, shield) and the one player swap per game share this list
+      const type = ['double', 'neg', 'shield', 'swap'].includes(b.type) ? b.type : null;
       if (!type) return res.status(400).json({ error: 'Unknown power-up.' });
       if (d.powers.some(p => p.owner === slot && p.type === type)) return res.status(409).json({ error: 'Already used.' });
-      const targetPicks = type === 'double' ? me.picks : (d.p[1 - slot] && d.p[1 - slot].picks) || [];
-      const target = clean(b.target, 24);
-      if (!targetPicks.includes(target)) return res.status(400).json({ error: 'Invalid player.' });
-      const p = { owner: slot, type, target, from: Math.max(0, Math.min(130, Number(b.from) || 0)), lbl: clean(b.lbl, 8),
-        ord: Number(b.ord) || 0, seen: (Array.isArray(b.seen) ? b.seen : []).slice(0, 300).map(Number), at: Date.now() };
+      const okId = v => /^[a-z0-9]{1,24}$/.test(String(v || ''));
+      const num = v => Math.max(0, Math.min(999, Math.floor(Number(v) || 0)));
+      const snap = o => { const r = {}; if (o && typeof o === 'object') for (const [k2, v] of Object.entries(o).slice(0, 30)) if (/^[a-zA-Z]{1,16}$/.test(k2)) r[k2] = num(v); return r; };
+      const p = { owner: slot, type, from: Math.max(0, Math.min(130, Number(b.from) || 0)), lbl: clean(b.lbl, 8), ord: Number(b.ord) || 0,
+        seen: (Array.isArray(b.seen) ? b.seen : []).slice(0, 300).map(Number), at: Date.now() };
+      if (type === 'double' || type === 'neg') { if (!okId(b.target)) return res.status(400).json({ error: 'Invalid player.' }); p.target = b.target; }
+      if (type === 'swap') {
+        if (!okId(b.out) || !okId(b.in) || b.out === b.in) return res.status(400).json({ error: 'Invalid player.' });
+        Object.assign(p, { k: b.k === 1 ? 1 : 0, out: b.out, in: b.in, keys: (Array.isArray(b.keys) ? b.keys : []).slice(0, 300).map(x => clean(x, 60)), snapOut: snap(b.snapOut), snapIn: snap(b.snapIn),
+          pl: b.pl && typeof b.pl === 'object' ? { id: b.in, team: clean(b.pl.team, 12), name: clean(b.pl.name, 60), pos: clean(b.pl.pos, 4), num: clean(b.pl.num, 3) } : null });
+      }
       await redis([['RPUSH', k + ':powers', JSON.stringify(p)], ['EXPIRE', k + ':powers', String(TTL)]]);
     } else {
       return res.status(400).json({ error: 'Unknown action.' });

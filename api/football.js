@@ -10,7 +10,11 @@
 // 4. Requests from other websites are refused.
 // 5. A safety reserve stops non-essential calls when the daily quota is nearly used up.
 
+import { mock } from './_mock.js';
+
 const BASE = 'https://v3.football.api-sports.io/';
+// Only the production site talks to API-Football. Preview links get fake matches (no requests spent).
+const USE_MOCK = process.env.VERCEL_ENV !== 'production';
 
 const ALLOWED = {
   'fixtures':         { params: ['date', 'id', 'live', 'timezone'] },
@@ -53,7 +57,7 @@ function fail(res, status, msg) {
 
 export default async function handler(req, res) {
   const key = process.env.API_FOOTBALL_KEY;
-  if (!key) return fail(res, 500, 'The API key is missing. Add API_FOOTBALL_KEY in Vercel > Settings > Environment Variables, then redeploy.');
+  if (!key && !USE_MOCK) return fail(res, 500, 'The API key is missing. Add API_FOOTBALL_KEY in Vercel > Settings > Environment Variables, then redeploy.');
 
   // Refuse calls made by other websites (browsers send this header automatically)
   const site = req.headers['sec-fetch-site'];
@@ -73,6 +77,8 @@ export default async function handler(req, res) {
     qs.set(p, s); picked[p] = s;
   }
   if (path === 'fixtures' && !picked.date && !picked.id && !picked.live) return fail(res, 400, 'Missing date or id.');
+
+  if (USE_MOCK) { res.setHeader('Cache-Control', 'no-store'); return res.status(200).json({ errors: [], response: mock(path, picked), requestsLeftToday: 100, preview: true }); }
 
   const ttl = cacheSeconds(path, picked);
   const cacheKey = path + '?' + qs.toString();
