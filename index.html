@@ -235,6 +235,11 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .dare-res{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:16px}
 .dq{font-family:var(--display);font-size:1.4rem;font-weight:700;line-height:1.15}
 .dare-res q{font-family:var(--display);font-size:1.6rem;font-weight:700;line-height:1.15;text-wrap:balance}
+.seg3{grid-template-columns:repeat(3,1fr)}
+.seg3 button{padding:10px 4px;font-size:.85rem}
+.invite{background:var(--panel);border:1px solid var(--accent);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.invite input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text);font:inherit;font-size:.85rem;width:100%}
+.invite .dchips .btn{flex:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -340,15 +345,17 @@ const S={
 const app=document.getElementById('app');
 const tabbar=document.getElementById('tabbar');
 const crest=(tid,cls='')=>`<span class="crest ${cls}" style="background:${TEAMS[tid]?TEAMS[tid].color:'#888'}" aria-hidden="true">${esc(TEAMS[tid]?TEAMS[tid].short:'?')}</span>`;
-const pname=i=>i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||'Friend'));
+const pname=i=>i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||(S.mode==='online'?'your friend':'Friend')));
 const backBtn=`<button class="back" id="back" aria-label="Back to matches"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></button>`;
 
-function go(view){S.view=view;render();window.scrollTo(0,0)}
+function go(view){S.view=view;if(!['wait','reveal','live','join'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
+  if(view==='home'&&S.mode==='online')S.names=store.get('fld.names',['You','Friend']);
+  render();window.scrollTo(0,0)}
 function render(){
   tabbar.hidden=!(S.view==='home'||S.view==='profile');
   document.getElementById('tab-home').setAttribute('aria-current',S.view==='home'?'page':'false');
   document.getElementById('tab-profile').setAttribute('aria-current',S.view==='profile'?'page':'false');
-  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile})[S.view]();
+  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin})[S.view]();
 }
 document.getElementById('tab-home').onclick=()=>go('home');
 document.getElementById('tab-profile').onclick=()=>go('profile');
@@ -363,7 +370,8 @@ function loadFixtures(){
   }).catch(e=>{S.fxErr=e.message}).finally(()=>{S.fxLoading=false;S.fxDay=day;if(S.view==='home')viewHome()});
 }
 function viewHome(){
-  const active=store.get('fld.active',null);
+  const active=store.get('fld.active',null),online=store.get('fld.online',null);
+  if(S.mode==='online')S.src='real';
   const days=dayChoices();const day=S.day||isoDay(new Date());
   if(S.src==='real'&&!S.fxLoading&&(S.fxDay!==day||(!S.fixtures&&!S.fxErr)))loadFixtures();
   let list='';
@@ -383,18 +391,21 @@ function viewHome(){
       <p>Pick two players from a real match, follow it live, and beat your rival on goals, assists, tackles and more.</p>
     </div>
     ${active?`<button class="resume" id="resume"><span><span class="eyebrow">Duel in progress</span><b>${esc(active.title)}</b><span class="small muted">${esc(active.names[0])} vs ${esc(active.names[1])}</span></span><span class="badge" style="background:var(--accent);color:var(--accent-ink)">Open</span></button>`:''}
-    <div class="seg" role="group" aria-label="Opponent">
-      <button id="m-friend" aria-pressed="${S.mode==='friend'}">vs Friend (same phone)</button>
-      <button id="m-cpu" aria-pressed="${S.mode==='cpu'}">vs Computer</button>
+    ${online?`<button class="resume" id="oresume"><span><span class="eyebrow">Online duel</span><b>${esc(online.title||'Your duel')}</b><span class="small muted">Tap to open</span></span><span class="badge" style="background:var(--accent);color:var(--accent-ink)">Open</span></button>`:''}
+    <div class="seg seg3" role="group" aria-label="Opponent">
+      <button id="m-online" aria-pressed="${S.mode==='online'}">Friend online</button>
+      <button id="m-friend" aria-pressed="${S.mode==='friend'}">Same phone</button>
+      <button id="m-cpu" aria-pressed="${S.mode==='cpu'}">Computer</button>
     </div>
+    ${S.mode==='online'?'<p class="small muted" style="margin:0">Pick a real match, choose your players, then send the invite link to your friend. You each play on your own phone.</p>':''}
     <div class="names">
-      <div class="field"><label for="n1">Player 1</label><input id="n1" maxlength="14" value="${esc(S.names[0])}"></div>
-      ${S.mode==='friend'?`<div class="field"><label for="n2">Player 2</label><input id="n2" maxlength="14" value="${esc(S.names[1])}"></div>`:`<div class="field"><label for="n2x">Player 2</label><input id="n2x" value="Computer" disabled></div>`}
+      <div class="field"><label for="n1">${S.mode==='online'?'Your name':'Player 1'}</label><input id="n1" maxlength="14" value="${esc(S.names[0])}"></div>
+      ${S.mode==='online'?'':S.mode==='friend'?`<div class="field"><label for="n2">Player 2</label><input id="n2" maxlength="14" value="${esc(S.names[1])}"></div>`:`<div class="field"><label for="n2x">Player 2</label><input id="n2x" value="Computer" disabled></div>`}
     </div>
-    <div class="seg" role="group" aria-label="Match type">
+    ${S.mode==='online'?'':`<div class="seg" role="group" aria-label="Match type">
       <button id="s-real" aria-pressed="${S.src==='real'}">Real matches</button>
       <button id="s-sim" aria-pressed="${S.src==='sim'}">Practice</button>
-    </div>
+    </div>`}
     ${S.src==='real'?`<div class="datebar" role="group" aria-label="Day">${days.map(d=>`<button data-day="${d.iso}" aria-pressed="${day===d.iso}">${d.label}</button>`).join('')}
       <label for="pickday">Other <input type="date" id="pickday" value="${days.some(d=>d.iso===day)?'':day}"></label></div>
       <label class="toggle"><input type="checkbox" id="toponly" ${S.topOnly?'checked':''}> Top leagues only</label>`:''}
@@ -422,13 +433,15 @@ function viewHome(){
       <p class="small muted" style="margin:10px 0 0">Both of you can pick the same player. Pick before kickoff. Practice matches score goals, assists and cards only. Finished real matches are replayed minute by minute.</p>
     </div>
   </section>`;
-  const saveNames=()=>{S.names=[document.getElementById('n1').value.trim()||'You',(document.getElementById('n2')?.value.trim())||S.names[1]||'Friend'];store.set('fld.names',S.names)};
+  const saveNames=()=>{S.names=[document.getElementById('n1').value.trim()||'You',(document.getElementById('n2')?.value.trim())||store.get('fld.names',['',''])[1]||'Friend'];store.set('fld.names',S.names)};
   document.getElementById('n1').onchange=saveNames;
   const n2=document.getElementById('n2');if(n2)n2.onchange=saveNames;
   document.getElementById('m-friend').onclick=()=>{saveNames();S.mode='friend';store.set('fld.mode','friend');viewHome()};
   document.getElementById('m-cpu').onclick=()=>{saveNames();S.mode='cpu';store.set('fld.mode','cpu');viewHome()};
-  document.getElementById('s-real').onclick=()=>{saveNames();S.src='real';store.set('fld.src','real');viewHome()};
-  document.getElementById('s-sim').onclick=()=>{saveNames();S.src='sim';store.set('fld.src','sim');viewHome()};
+  const sr=document.getElementById('s-real');if(sr)sr.onclick=()=>{saveNames();S.src='real';store.set('fld.src','real');viewHome()};
+  const ss=document.getElementById('s-sim');if(ss)ss.onclick=()=>{saveNames();S.src='sim';store.set('fld.src','sim');viewHome()};
+  document.getElementById('m-online').onclick=()=>{saveNames();S.mode='online';store.set('fld.mode','online');viewHome()};
+  const orr=document.getElementById('oresume');if(orr)orr.onclick=()=>openOnline(online.code);
   app.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{S.day=b.dataset.day;store.set('fld.day',null);viewHome()});
   const pd=document.getElementById('pickday');if(pd)pd.onchange=()=>{if(pd.value){S.day=pd.value;viewHome()}};
   const tp=document.getElementById('toponly');if(tp)tp.onchange=()=>{S.topOnly=tp.checked;store.set('fld.top',S.topOnly);viewHome()};
@@ -439,7 +452,7 @@ function viewHome(){
 }
 function fixtureCard(f){
   const right=f.kind==='sim'?`<span>${f.when}</span>`:fxStatus(f);
-  const canPlay=f.kind==='sim'||!['PST','CANC','ABD','AWD','WO'].includes(f.status);
+  const canPlay=f.kind==='sim'||(!['PST','CANC','ABD','AWD','WO'].includes(f.status)&&!(S.mode==='online'&&FINAL.has(f.status)));
   const cta=f.kind==='sim'?'Start duel':FINAL.has(f.status)?'Replay as a duel':LIVE.has(f.status)?'Join live (late pick)':'Start duel';
   return `<button class="fixture" data-f="${f.id}" ${canPlay?'':'disabled style="opacity:.5"'}>
     <div class="comp"><span>${f.kind==='sim'?esc(f.comp):''}</span>${right}</div>
@@ -453,7 +466,9 @@ function fixtureCard(f){
 // ================= Draft =================
 function startDuel(f,firstPicker=0){
   stopTimer();
-  S.fixture=f;S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=S.mode==='cpu'?0:firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
+  if(S.mode==='online'&&!S.joining){S.online=null;S.names=[store.get('fld.names',['You'])[0]||'You',''];firstPicker=0}
+  S.joining=false;
+  S.fixture=f;S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=S.mode==='cpu'?0:S.mode==='online'?(S.online?S.online.slot:0):firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
   go('draft');
   if(f.kind==='real'&&!(SQUAD[f.home]&&SQUAD[f.home].length&&SQUAD[f.away]&&SQUAD[f.away].length))loadPlayers(f);
 }
@@ -528,6 +543,7 @@ function viewDraft(){
     if(S.mode==='cpu')S.dares=['',''];
     if(mine.length<2)return;
     if(S.mode==='cpu'){S.picks[1]=cpuPicks(f);go('reveal');return}
+    if(S.mode==='online'){submitOnlinePicks();return}
     if(i===S.first){S.turn=1-i;S.filter='all';go('pass')}else go('reveal');
   };
 }
@@ -580,11 +596,13 @@ function activePowers(){const E=S.eng;if(!E||E.final)return [];const now=nowMin(
 function activatePower(owner,type,target){
   const E=S.eng;if(!inPlay(E)||S.powers.some(p=>p.owner===owner&&p.type===type))return;
   const shown=E.shown();const from=nowMin(E);
-  S.powers.push({owner,type,target,from,seen:shown.map(e=>e.ord)});
-  const maxOrd=Math.max(from,...shown.map(e=>e.ord||0),...S.pwFeed.map(e=>e.ord));
-  S.pwFeed.push({ord:maxOrd+0.0001,el:from,lbl:E.clock().min,type:'power',owner,ptype:type,player:target,team:PL[target].team,pts:{}});
-  if(E.kind==='real'&&!E.replay)saveActive();
+  const ord=Math.max(from,...shown.map(e=>e.ord||0),...S.powers.map(p=>p.ord||0))+0.0001;
+  const pw={owner,type,target,from,ord,lbl:E.clock().min,seen:shown.map(e=>e.ord)};
+  S.powers.push(pw);rebuildPwFeed();
+  if(S.mode==='online'){onlinePost({action:'power',type,target,from,ord,lbl:pw.lbl,seen:pw.seen}).catch(e=>{S.powers=S.powers.filter(x=>x!==pw);rebuildPwFeed();toast(e.message);updateLive()})}
+  else if(E.kind==='real'&&!E.replay)saveActive();
 }
+function rebuildPwFeed(){S.pwFeed=S.powers.map(p=>({ord:p.ord,el:p.from,lbl:p.lbl,type:'power',owner:p.owner,ptype:p.type,player:p.target,team:PL[p.target]?PL[p.target].team:'',pts:{}}))}
 function powerAdjust(){
   const E=S.eng,adj=[{},{}],per=S.powers.map(()=>0);
   if(!E||!S.powers.length)return {adj,per};
@@ -620,11 +638,11 @@ function cpuPowers(){
 }
 function powersHtml(){
   const E=S.eng,now=nowMin(E),ok=inPlay(E);
-  return [0,1].map(i=>{const cpu=S.mode==='cpu'&&i===1;
+  return [0,1].map(i=>{const cpu=(S.mode==='cpu'&&i===1)||(S.mode==='online'&&S.online&&i!==S.online.slot);
     return `<div class="pw"><h3>${esc(pname(i))} · power-ups</h3><div class="pwbtns">${['double','neg'].map(type=>{
       const used=S.powers.find(p=>p.owner===i&&p.type===type),P=POWER[type];
       const left=used?used.from+P.dur-now:0,on=used&&left>0&&!E.final;
-      const state=used?(on?`Active on ${esc(PL[used.target].name)} · ${left}′ left`:`Used on ${esc(PL[used.target].name)}`):cpu?'The computer picks its moment':ok?'Tap to use':'Use while the ball is in play';
+      const state=used?(on?`Active on ${esc(PL[used.target].name)} · ${left}′ left`:`Used on ${esc(PL[used.target].name)}`):cpu?(S.mode==='cpu'?'The computer picks its moment':`${esc(pname(i))} hasn't used it yet`):ok?'Tap to use':'Use while the ball is in play';
       return `<button class="pwb ${type} ${on?'on':''}" data-pw="${i}:${type}" ${used||cpu||!ok?'disabled':''}><b>${P.icon} ${P.label}</b><span>${type==='double'?'One of your players · 10 min':'One of their players · 5 min'}</span><span class="st">${state}</span></button>`}).join('')}</div>
       ${S.pwPick&&S.pwPick.owner===i?`<div class="pwpick"><span>${S.pwPick.type==='double'?'Double the points of which of your players?':'Flip the points of which of their players?'}</span>${S.picks[S.pwPick.type==='double'?i:1-i].map(id=>`<button class="ctl" data-pwt="${id}">${esc(PL[id].name)}</button>`).join('')}<button class="linkbtn" data-pwx="1">Cancel</button></div>`:''}
     </div>`}).join('');
@@ -648,6 +666,7 @@ function viewReveal(){
       <span class="small muted">Forfeit from <b>${esc(pname(i))}</b> for <b>${esc(pname(1-i))}</b>, if they lose:</span>
       <q class="dq">${esc(S.dares[i])}</q>
       ${S.dareOk[i]?`<span class="small" style="color:var(--accent)">✓ Accepted by ${esc(pname(1-i))}</span>`
+        :S.mode==='online'&&S.online&&S.online.slot===i?`<span class="small muted">Waiting for ${esc(pname(1-i))} to accept or refuse…</span>`
         :`<div class="dchips"><button class="btn" style="padding:10px" data-acc="${i}">${esc(pname(1-i))}: accept</button><button class="btn ghost" style="padding:10px" data-ref="${i}">Refuse</button></div>`}
     </div>`).join('')}
     ${S.dares&&(S.dares[0]||S.dares[1])?`<p class="small muted" style="margin:0;text-align:center">Only accepted forfeits count. Anything not accepted at kickoff is dropped.</p>`:''}
@@ -655,9 +674,10 @@ function viewReveal(){
   </section>
   <div class="actionbar"><div><button class="btn" id="ko">${f.kind==='sim'?'Kick off':replay?'Start replay':'Follow live'}</button></div></div>`;
   document.getElementById('back').onclick=()=>go('home');
-  app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{S.dareOk[+b.dataset.acc]=true;viewReveal()});
-  app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{S.dares[+b.dataset.ref]='';viewReveal()});
+  app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:true}).then(()=>viewReveal(),e=>toast(e.message));return}S.dareOk[+b.dataset.acc]=true;viewReveal()});
+  app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:false}).then(()=>viewReveal(),e=>toast(e.message));return}S.dares[+b.dataset.ref]='';viewReveal()});
   document.getElementById('ko').onclick=()=>{
+    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false);go('live');S.eng.start();startSync(15000);return}
     [0,1].forEach(i=>{if(!S.dareOk[i])S.dares[i]=''});
     S.speed=1;S.paused=false;resetPowers();
     if(f.kind==='sim'){S.eng=simEngine(f);go('live');startTimer()}
@@ -676,6 +696,128 @@ function resumeDuel(){
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status));go('live');S.eng.start();
+}
+
+// ================= Online duels (two phones) =================
+const shareUrl=code=>location.origin+location.pathname+'#duel-'+code;
+async function onlineFetch(opts){
+  let r,b;
+  try{r=await fetch('/api/duel'+(opts.get?'?'+new URLSearchParams(opts.get):''),opts.body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(opts.body)}:{});b=await r.json()}
+  catch(e){throw new Error('No connection. Check your internet and try again.')}
+  if(!r.ok||b.error)throw new Error(b.error||'Something went wrong.');
+  return b;
+}
+async function onlinePost(body){
+  const o=S.online;const b=await onlineFetch({body:{...body,code:o.code,token:o.token}});
+  applyOnline(b.state);return b;
+}
+function applyOnline(st){
+  if(!st)return;S.online.state=st;
+  Object.entries(st.teams||{}).forEach(([k,t])=>{if(!TEAMS[k])TEAMS[k]=t});
+  S.names=[(st.players[0]&&st.players[0].name)||'Player 1',(st.players[1]&&st.players[1].name)||''];
+  st.players.forEach(p=>p&&(p.players||[]).forEach(x=>{if(!PL[x.id])PL[x.id]=x}));
+  if(st.both){
+    S.picks=[st.players[0].picks,st.players[1].picks];
+    S.dares=[st.players[0].dare,st.players[1].dare];S.dareOk=[st.players[0].dareOk,st.players[1].dareOk];
+    S.powers=st.powers||[];rebuildPwFeed();
+  }
+}
+function startSync(ms){
+  if(S.syncT)clearInterval(S.syncT);
+  S.syncT=setInterval(async()=>{
+    if(!S.online)return;
+    try{const st=await onlineFetch({get:{code:S.online.code,token:S.online.token}});const was=S.online.state&&S.online.state.both;applyOnline(st);
+      if(S.view==='wait'){if(st.both)go('reveal');else viewWait()}
+      else if(S.view==='reveal')viewReveal();
+      else if(S.view==='live')updateLive();
+    }catch(e){}
+  },ms);
+}
+async function submitOnlinePicks(){
+  const f=S.fixture,i=S.turn,btn=document.getElementById('lock');if(btn){btn.disabled=true;btn.textContent='Saving…'}
+  try{
+    if(!S.online){
+      const b=await onlineFetch({body:{action:'create',name:S.names[0],fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
+      S.online={code:b.state.code,token:b.token,slot:0};
+    }
+    store.set('fld.online',{code:S.online.code,token:S.online.token,slot:S.online.slot,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
+    await onlinePost({action:'picks',picks:S.picks[i],players:S.picks[i].map(id=>PL[id]),dare:S.dares[i]||''});
+    if(S.online.state.both)go('reveal');else{go('wait');startSync(4000)}
+  }catch(e){toast(e.message);if(btn){btn.disabled=false;btn.textContent='Lock in picks'}}
+}
+function viewWait(){
+  const o=S.online,st=o.state||{},f=S.fixture,other=st.players&&st.players[1-o.slot];
+  const url=shareUrl(o.code);
+  const msg=`⚽ Duel me on ${TEAMS[f.home].name} vs ${TEAMS[f.away].name}! Pick your 2 players here: ${url}`;
+  app.innerHTML=`<section class="screen">
+    <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${esc(TEAMS[f.home].short)} vs ${esc(TEAMS[f.away].short)} · Online duel</div><h2>Your picks are locked</h2></div></div>
+    <div class="lineups">${lineupCard(o.slot)}</div>
+    ${o.slot===0&&!other?`<div class="invite">
+      <b>Send this link to your friend</b>
+      <input id="ilink" readonly value="${esc(url)}">
+      <div class="dchips"><button class="btn" id="ishare" style="padding:12px">Share invite</button><button class="btn ghost" id="icopy" style="padding:12px">Copy link</button></div>
+      <span class="small muted">They open it, pick their 2 players, and the duel starts on both phones.</span>
+    </div>`:''}
+    <div class="note" style="text-align:center"><div class="spin"></div><p style="margin:8px 0 0">${other?`<b>${esc(other.name)}</b> joined and is picking players…`:'Waiting for your friend to join…'}</p></div>
+  </section>`;
+  document.getElementById('back').onclick=()=>go('home');
+  const sh=document.getElementById('ishare');
+  if(sh)sh.onclick=async()=>{try{if(navigator.share){await navigator.share({text:msg});return}}catch(e){if(e&&e.name==='AbortError')return}
+    try{await navigator.clipboard.writeText(msg);toast('Invite copied. Paste it in WhatsApp')}catch(e){document.getElementById('ilink').select()}};
+  const cp=document.getElementById('icopy');
+  if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('Link copied')}catch(e){const i=document.getElementById('ilink');i.select()}};
+}
+async function openOnline(code){
+  const saved=store.get('fld.online',null);
+  S.mode='online';S.joinCode=code;S.joinErr=null;S.joinState=null;
+  if(saved&&saved.code===code){
+    S.online={code,token:saved.token,slot:saved.slot};
+    try{const st=await onlineFetch({get:{code,token:saved.token}});applyOnline(st);
+      S.fixture=st.fx;
+      const me=st.players[saved.slot];
+      if(!me||!me.ready){S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;go('draft');loadPlayers(S.fixture);return}
+      if(!st.both){go('wait');startSync(4000);return}
+      const started=LIVE.has(st.fx.status)||Date.now()>Date.parse(st.fx.kickoff);
+      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false);go('live');S.eng.start();startSync(15000)}else{go('reveal');startSync(5000)}
+    }catch(e){toast(e.message);store.del('fld.online');go('home')}
+    return;
+  }
+  go('join');
+  try{S.joinState=await onlineFetch({get:{code}})}catch(e){S.joinErr=e.message}
+  if(S.view==='join')viewJoin();
+}
+function viewJoin(){
+  const st=S.joinState;
+  let body;
+  if(S.joinErr)body=`<div class="note err"><b>Can't open this duel.</b> ${esc(S.joinErr)}</div>`;
+  else if(!st)body='<div class="note"><div class="spin"></div></div>';
+  else{
+    Object.entries(st.teams||{}).forEach(([k,t])=>{if(!TEAMS[k])TEAMS[k]=t});
+    const f=st.fx,host=st.players[0];
+    body=st.players[1]?`<div class="note err"><b>This duel is full.</b> Two players have already joined.</div>`:`
+    <div class="fixture" style="cursor:default"><div class="comp"><span>${esc(f.comp)}</span><span>${new Date(f.kickoff).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
+      <div class="team">${crest(f.home)}<b>${esc(TEAMS[f.home].name)}</b></div><div class="vs">VS</div><div class="team">${crest(f.away)}<b>${esc(TEAMS[f.away].name)}</b></div></div>
+    <p style="margin:0;text-align:center"><b>${esc(host?host.name:'Your friend')}</b> challenged you to a duel on this match.</p>
+    <div class="field"><label for="jname">Your name</label><input id="jname" maxlength="14" value="${esc(store.get('fld.names',['',''])[0]||'')}"></div>`;
+  }
+  app.innerHTML=`<section class="screen">
+    <div class="hero"><div class="eyebrow">You've been challenged</div><h1>Football<br><span>Live</span> Duel</h1><p>Pick 2 players from a real match and beat your friend on goals, assists, tackles and more.</p></div>
+    ${body}
+  </section>
+  ${st&&!st.players[1]&&!S.joinErr?'<div class="actionbar"><div><button class="btn ghost" id="jno">Not now</button><button class="btn" id="jgo">Accept the duel</button></div></div>':'<div class="actionbar"><div><button class="btn" id="jno">Go to the app</button></div></div>'}`;
+  document.getElementById('jno').onclick=()=>{history.replaceState(null,'',location.pathname);S.mode=store.get('fld.mode','friend')==='online'?'online':S.mode;go('home')};
+  const jg=document.getElementById('jgo');
+  if(jg)jg.onclick=async()=>{
+    const name=document.getElementById('jname').value.trim()||'Player 2';
+    const nm=store.get('fld.names',['You','Friend']);nm[0]=name;store.set('fld.names',nm);
+    jg.disabled=true;jg.textContent='Joining…';
+    try{const b=await onlineFetch({body:{action:'join',code:S.joinCode,name}});
+      S.online={code:S.joinCode,token:b.token,slot:1};applyOnline(b.state);
+      store.set('fld.online',{code:S.joinCode,token:b.token,slot:1,title:`${TEAMS[b.state.fx.home].name} vs ${TEAMS[b.state.fx.away].name}`});
+      history.replaceState(null,'',location.pathname);
+      S.joining=true;startDuel(b.state.fx);
+    }catch(e){toast(e.message);jg.disabled=false;jg.textContent='Accept the duel'}
+  };
 }
 
 // ================= Engines =================
@@ -880,8 +1022,10 @@ function finishDuel(){
   stopTimer();const E=S.eng;if(!E.done)E.finish();
   if(E.saved)return;E.saved=true;E.stop();
   const t=E.tally(),tot=totals(),f=S.fixture;
-  const out=tot[0]>tot[1]?'W':tot[0]<tot[1]?'L':'D';
-  S.history.unshift({at:Date.now(),names:[pname(0),pname(1)],tot,score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real'});
+  const me=S.online?S.online.slot:0;
+  const out=tot[me]>tot[1-me]?'W':tot[me]<tot[1-me]?'L':'D';
+  if(S.online){store.del('fld.online');if(S.syncT){clearInterval(S.syncT);S.syncT=null}}
+  S.history.unshift({at:Date.now(),names:[pname(me),pname(1-me)],tot:[tot[me],tot[1-me]],score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real'});
   S.history=S.history.slice(0,30);store.set('fld.history',S.history);
   if(f.kind==='real')store.del('fld.active');
   go('result');
@@ -983,12 +1127,12 @@ function viewResult(){
     <div class="result">
       <div class="trophy" aria-hidden="true">${w===-1?'🤝':'🏆'}</div>
       <div class="eyebrow" style="color:var(--gold)">Full time · ${esc(TEAMS[f.home].short)} ${t.hs}–${t.as} ${esc(TEAMS[f.away].short)}</div>
-      <h2>${w===-1?'It\'s a draw':pname(w)==='You'?'You win':esc(pname(w))+' wins'}</h2>
+      <h2>${w===-1?'It\'s a draw':(pname(w)==='You'||(S.online&&S.online.slot===w))?'You win':esc(pname(w))+' wins'}</h2>
       <div class="final num">${tot[0]<0?"−"+(-tot[0]):tot[0]} : ${tot[1]<0?"−"+(-tot[1]):tot[1]}</div>
       <div class="small muted">${esc(pname(0))} vs ${esc(pname(1))}</div>
     </div>
     ${S.dares&&(S.dares[0]||S.dares[1])?(w===-1?`<div class="dare-res"><b>🤝 Draw.</b> Both forfeits stay locked.</div>`
-      :S.dares[w]?`<div class="dare-res"><span class="eyebrow" style="color:var(--gold)">🔓 Forfeit unlocked</span><b>${esc(pname(1-w))} must:</b><q>${esc(S.dares[w])}</q><span class="small muted">Chosen by ${esc(pname(w))}</span></div>`
+      :S.dares[w]&&S.dareOk[w]?`<div class="dare-res"><span class="eyebrow" style="color:var(--gold)">🔓 Forfeit unlocked</span><b>${esc(pname(1-w))} must:</b><q>${esc(S.dares[w])}</q><span class="small muted">Chosen by ${esc(pname(w))}</span></div>`
       :`<div class="dare-res">${esc(pname(w))} won but didn't set a forfeit. ${esc(pname(1-w))} got lucky.</div>`):''}
     ${E.kind==='real'?'<p class="small muted" style="margin:0;text-align:center">Final points use the official full-match stats from API-Football.</p>':''}
     <div class="breakdown"><h3>${esc(pname(0))} · ${tot[0]} pts</h3>${lines(0)}</div>
@@ -999,7 +1143,7 @@ function viewResult(){
   document.getElementById('home').onclick=()=>go('home');
   document.getElementById('again').onclick=()=>startDuel(f,S.mode==='friend'?1-S.first:0);
   document.getElementById('copy').onclick=()=>{
-    const txt=`Football Live Duel: ${pname(0)} ${tot[0]} – ${tot[1]} ${pname(1)} (${TEAMS[f.home].name} ${t.hs}–${t.as} ${TEAMS[f.away].name}). ${w===-1?'Draw!':pname(w)+' wins!'}${w!==-1&&S.dares&&S.dares[w]?` Forfeit for ${pname(1-w)}: ${S.dares[w]}`:''}`;
+    const txt=`Football Live Duel: ${pname(0)} ${tot[0]} – ${tot[1]} ${pname(1)} (${TEAMS[f.home].name} ${t.hs}–${t.as} ${TEAMS[f.away].name}). ${w===-1?'Draw!':pname(w)+' wins!'}${w!==-1&&S.dares&&S.dares[w]&&S.dareOk[w]?` Forfeit for ${pname(1-w)}: ${S.dares[w]}`:''}`;
     try{navigator.clipboard.writeText(txt).then(()=>toast('Copied'),()=>toast(txt))}catch(e){toast(txt)}
   };
 }
@@ -1022,7 +1166,8 @@ function viewProfile(){
   if(cl)cl.onclick=()=>{if(cl.dataset.sure){S.history=[];store.set('fld.history',[]);render()}else{cl.dataset.sure=1;cl.textContent='Tap again to clear all duels'}};
 }
 
-render();
+const hm=location.hash.match(/^#duel-([a-z0-9]{8})$/);
+if(hm)openOnline(hm[1]);else render();
 })();
 
 </script>

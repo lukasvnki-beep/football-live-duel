@@ -1,0 +1,155 @@
+// Online duels: two phones share one duel through a small Redis database (Upstash, connected in Vercel).
+// Each player gets a secret token when they create or join; only they can change their own picks.
+// Keys (all expire after 3 days):
+//   duel:<code>:meta     fixture + teams + names
+//   duel:<code>:p0 / p1  that player's picks, proposed forfeit, accepted flag (+ hashed token)
+//   duel:<code>:powers   list of power-ups used, in order
+
+import crypto from 'node:crypto';
+
+const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const TTL = 3 * 24 * 3600;
+
+async function redis(cmds) {
+  const r = await fetch(URL_ + '/pipeline', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmds),
+  });
+  if (!r.ok) throw new Error('db ' + r.status);
+  const out = await r.json();
+  return out.map(x => { if (x.error) throw new Error(x.error); return x.result; });
+}
+
+const hashTok = t => crypto.createHash('sha256').update(String(t)).digest('hex');
+const newCode = () => { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; const b = crypto.randomBytes(8); for (const x of b) s += a[x % a.length]; return s; };
+const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+const okCode = c => /^[a-z0-9]{8}$/.test(String(c || ''));
+
+const creates = new Map();
+function limited(ip) {
+  const now = Date.now(); let v = creates.get(ip);
+  if (!v || now - v.start > 3600e3) { v = { start: now, count: 0 }; creates.set(ip, v); }
+  v.count++; if (creates.size > 5000) creates.clear();
+  return v.count > 30;
+}
+
+async function load(code) {
+  const k = 'duel:' + code;
+  const [meta, p0, p1, powers] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1'], ['LRANGE', k + ':powers', '0', '-1']]).then(([m, pw]) => [...m, pw]);
+  if (!meta) return null;
+  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)) };
+}
+
+// What a given player is allowed to see
+function view(d, slot) {
+  const both = !!(d.p[0] && d.p[0].ready && d.p[1] && d.p[1].ready);
+  const players = d.p.map((p, i) => p && {
+    name: p.name, ready: !!p.ready,
+    picks: (both || i === slot) ? p.picks || [] : [],
+    players: (both || i === slot) ? p.players || [] : [],
+    dare: (both || i === slot) ? p.dare || '' : '',
+    dareOk: !!p.dareOk,
+  });
+  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers };
+}
+
+function slotOf(d, token) {
+  const h = hashTok(token);
+  return d.p.findIndex(p => p && p.tok === h);
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  const site = req.headers['sec-fetch-site'];
+  if (site && site !== 'same-origin' && site !== 'none') return res.status(403).json({ error: 'Not allowed.' });
+  if (!URL_ || !TOKEN) return res.status(500).json({ error: 'Online play is not set up yet: connect an Upstash Redis database to this project in Vercel > Storage.' });
+
+  try {
+    if (req.method === 'GET') {
+      const code = String(req.query.code || '');
+      if (!okCode(code)) return res.status(400).json({ error: 'Invalid duel link.' });
+      const d = await load(code);
+      if (!d) return res.status(404).json({ error: 'This duel does not exist or has expired.' });
+      const slot = req.query.token ? slotOf(d, req.query.token) : -1;
+      return res.status(200).json(view(d, slot));
+    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
+
+    const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+
+    if (b.action === 'create') {
+      if (limited(ip)) return res.status(429).json({ error: 'Too many new duels. Try again later.' });
+      const fx = b.fx || {};
+      if (!/^\d{1,9}$/.test(String(fx.apiId || ''))) return res.status(400).json({ error: 'Invalid match.' });
+      const teams = {};
+      for (const [k, t] of Object.entries(b.teams || {}).slice(0, 2)) teams[clean(k, 12)] = { name: clean(t.name, 60), short: clean(t.short, 4), color: clean(t.color, 30) };
+      const meta = { code: newCode(), created: Date.now(), teams,
+        fx: { id: 'r' + fx.apiId, apiId: Number(fx.apiId), kind: 'real', home: clean(fx.home, 12), away: clean(fx.away, 12), comp: clean(fx.comp, 80), leagueId: Number(fx.leagueId) || 0, kickoff: clean(fx.kickoff, 40), status: clean(fx.status, 6), elapsed: Number(fx.elapsed) || null, goals: { home: null, away: null }, homeTeam: { id: Number(fx.homeTeam && fx.homeTeam.id) || 0, name: clean(fx.homeTeam && fx.homeTeam.name, 60) }, awayTeam: { id: Number(fx.awayTeam && fx.awayTeam.id) || 0, name: clean(fx.awayTeam && fx.awayTeam.name, 60) } } };
+      const token = crypto.randomBytes(18).toString('hex');
+      const k = 'duel:' + meta.code;
+      await redis([
+        ['SET', k + ':meta', JSON.stringify(meta), 'EX', String(TTL)],
+        ['SET', k + ':p0', JSON.stringify({ name: clean(b.name, 14) || 'Player 1', tok: hashTok(token) }), 'EX', String(TTL)],
+      ]);
+      const d = await load(meta.code);
+      return res.status(200).json({ token, state: view(d, 0) });
+    }
+
+    const code = String(b.code || '');
+    if (!okCode(code)) return res.status(400).json({ error: 'Invalid duel link.' });
+    const k = 'duel:' + code;
+    const d = await load(code);
+    if (!d) return res.status(404).json({ error: 'This duel does not exist or has expired.' });
+
+    if (b.action === 'join') {
+      if (d.p[1]) {
+        const s = b.token ? slotOf(d, b.token) : -1;
+        if (s >= 0) return res.status(200).json({ token: b.token, state: view(d, s) });
+        return res.status(409).json({ error: 'Two players are already in this duel.' });
+      }
+      const token = crypto.randomBytes(18).toString('hex');
+      const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: clean(b.name, 14) || 'Player 2', tok: hashTok(token) }), 'EX', String(TTL), 'NX']]);
+      if (!ok[0]) return res.status(409).json({ error: 'Two players are already in this duel.' });
+      const d2 = await load(code);
+      return res.status(200).json({ token, state: view(d2, 1) });
+    }
+
+    const slot = slotOf(d, b.token);
+    if (slot < 0) return res.status(403).json({ error: 'You are not a player in this duel.' });
+    const me = d.p[slot];
+
+    if (b.action === 'picks') {
+      if (me.ready) return res.status(409).json({ error: 'Your picks are already locked.' });
+      const picks = (Array.isArray(b.picks) ? b.picks : []).map(x => clean(x, 24)).filter(Boolean).slice(0, 2);
+      if (picks.length !== 2) return res.status(400).json({ error: 'Pick exactly 2 players.' });
+      const players = (Array.isArray(b.players) ? b.players : []).slice(0, 2).map(p => ({ id: clean(p.id, 24), team: clean(p.team, 12), name: clean(p.name, 60), pos: clean(p.pos, 4) }));
+      const upd = { ...me, picks, players, dare: clean(b.dare, 120), ready: true };
+      await redis([['SET', k + ':p' + slot, JSON.stringify(upd), 'KEEPTTL']]);
+    } else if (b.action === 'consent') {
+      // Accept or refuse the forfeit the OTHER player proposed for me
+      const o = 1 - slot, other = d.p[o];
+      if (!other || !other.dare) return res.status(400).json({ error: 'There is no forfeit to answer.' });
+      const upd = b.accept ? { ...other, dareOk: true } : { ...other, dare: '', dareOk: false };
+      await redis([['SET', k + ':p' + o, JSON.stringify(upd), 'KEEPTTL']]);
+    } else if (b.action === 'power') {
+      const type = b.type === 'double' ? 'double' : b.type === 'neg' ? 'neg' : null;
+      if (!type) return res.status(400).json({ error: 'Unknown power-up.' });
+      if (d.powers.some(p => p.owner === slot && p.type === type)) return res.status(409).json({ error: 'Already used.' });
+      const targetPicks = type === 'double' ? me.picks : (d.p[1 - slot] && d.p[1 - slot].picks) || [];
+      const target = clean(b.target, 24);
+      if (!targetPicks.includes(target)) return res.status(400).json({ error: 'Invalid player.' });
+      const p = { owner: slot, type, target, from: Math.max(0, Math.min(130, Number(b.from) || 0)), lbl: clean(b.lbl, 8),
+        ord: Number(b.ord) || 0, seen: (Array.isArray(b.seen) ? b.seen : []).slice(0, 300).map(Number), at: Date.now() };
+      await redis([['RPUSH', k + ':powers', JSON.stringify(p)], ['EXPIRE', k + ':powers', String(TTL)]]);
+    } else {
+      return res.status(400).json({ error: 'Unknown action.' });
+    }
+    const d3 = await load(code);
+    return res.status(200).json({ state: view(d3, slot) });
+  } catch (e) {
+    return res.status(502).json({ error: 'The duel server had a problem. Try again in a moment.' });
+  }
+}
