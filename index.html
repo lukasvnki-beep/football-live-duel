@@ -265,8 +265,8 @@ function teamKey(t){
 }
 const POSMAP={G:'GK',D:'DEF',M:'MID',F:'FWD',Goalkeeper:'GK',Defender:'DEF',Midfielder:'MID',Attacker:'FWD'};
 function regPlayer(p,tkey){
-  if(!p||p.id==null)return null;
-  const id='p'+p.id;
+  if(!p||(!p.id&&!p.name))return null;
+  const id=p.id?'p'+p.id:'n'+hash(tkey+'|'+p.name); // some smaller leagues send id 0
   if(!PL[id])PL[id]={id,team:tkey,name:p.name||'Unknown player',pos:POSMAP[p.pos||p.position]||'',num:p.number};
   else{if(p.name&&PL[id].name==='Unknown player')PL[id].name=p.name;if(!PL[id].pos&&(p.pos||p.position))PL[id].pos=POSMAP[p.pos||p.position]||''}
   return id;
@@ -609,7 +609,7 @@ function evWord(e,id){return e.type==='goal'?(e.player===id?'goal':'assist'):e.t
 
 // ---- Real match (live polling or replay of a finished match) ----
 function statsOf(raw){const s=(raw&&raw[0])||{};const n=v=>{const x=parseInt(v,10);return isNaN(x)?0:x};
-  // API-Football gives passes.accuracy as the number of accurate passes for a single match.
+  // API-Football gives passes.accuracy as the number of accurate passes for a single match (checked on a live match).
   // If it ever comes back as a percentage, convert using the total.
   const tot=n(s.passes&&s.passes.total);let acc=n(s.passes&&s.passes.accuracy);
   if(typeof (s.passes&&s.passes.accuracy)==='string'&&String(s.passes.accuracy).includes('%'))acc=Math.round(tot*acc/100);

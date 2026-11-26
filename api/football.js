@@ -9,7 +9,6 @@ const ALLOWED = {
   'fixtures':         { params: ['date', 'id', 'live', 'league', 'season', 'timezone'] },
   'fixtures/lineups': { params: ['fixture'] },
   'players/squads':   { params: ['team'] },
-  'status':           { params: [] },
 };
 
 function cacheSeconds(path, q) {
