@@ -273,6 +273,25 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .capbtns button{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:7px 10px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .capbtns button[aria-pressed="true"]{background:var(--gold);color:#2a1c00;border-color:var(--gold)}
 .prevbanner{background:rgba(124,199,255,.12);border:1px solid rgba(124,199,255,.4);border-radius:12px;padding:8px 12px;font-size:.8rem;text-align:center}
+.lg{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+.lg h3{font-size:1.05rem;text-transform:uppercase;color:var(--muted)}
+.pcard{display:flex;justify-content:space-between;gap:10px;align-items:center;background:linear-gradient(135deg,rgba(100,239,176,.14),rgba(255,215,124,.10));border:1px solid rgba(100,239,176,.35);border-radius:14px;padding:12px}
+.pcard>div:first-child{display:flex;flex-direction:column;min-width:0}
+.pcard b{font-family:var(--display);font-size:1.6rem;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard code{font-size:.85rem;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:6px;color:var(--accent)}
+.pst{display:flex;gap:10px;text-align:center}
+.pst b{display:block;font-size:1.5rem}
+.pst span{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.addf{display:flex;gap:6px}
+.addf input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px 12px;font:inherit;font-size:16px}
+.ltable{display:flex;flex-direction:column;gap:4px}
+.lrow{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--panel2)}
+.lrow.me{outline:1px solid rgba(100,239,176,.5)}
+.lrow .rk{font-family:var(--display);font-weight:800;color:var(--muted);text-align:center}
+.lrow .ln{display:flex;flex-direction:column;min-width:0}
+.lrow .ln b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .ln small{color:var(--muted);font-size:.72rem}
+.lrow .lw{font-family:var(--display);font-size:1.3rem;color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.88rem;z-index:9}
 
 /* Profile */
@@ -998,7 +1017,8 @@ async function submitOnlinePicks(){
   const f=S.fixture,i=S.turn,btn=document.getElementById('lock');if(btn){btn.disabled=true;btn.textContent='Saving…'}
   try{
     if(!S.online){
-      const b=await onlineFetch({body:{action:'create',name:S.names[0],fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
+      const pr=await ensureProfile(S.names[0]);
+      const b=await onlineFetch({body:{action:'create',name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
       S.online={code:b.state.code,token:b.token,slot:0};
     }
     store.set('fld.online',{code:S.online.code,token:S.online.token,slot:S.online.slot,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
@@ -1072,7 +1092,7 @@ function viewJoin(){
     const name=document.getElementById('jname').value.trim()||'Player 2';
     const nm=store.get('fld.names',['You','Friend']);nm[0]=name;store.set('fld.names',nm);
     jg.disabled=true;jg.textContent='Joining…';
-    try{const b=await onlineFetch({body:{action:'join',code:S.joinCode,name}});
+    try{const pr=await ensureProfile(name);const b=await onlineFetch({body:{action:'join',code:S.joinCode,name,pid:pr&&pr.id,ptok:pr&&pr.token}});
       S.online={code:S.joinCode,token:b.token,slot:1};applyOnline(b.state);
       store.set('fld.online',{code:S.joinCode,token:b.token,slot:1,title:`${TEAMS[b.state.fx.home].name} vs ${TEAMS[b.state.fx.away].name}`});
       history.replaceState(null,'',location.pathname);
@@ -1354,7 +1374,8 @@ function finishDuel(){
   const t=E.tally(),tot=totals(),f=S.fixture;
   const me=S.online?S.online.slot:0;
   const out=tot[me]>tot[1-me]?'W':tot[me]<tot[1-me]?'L':'D';
-  if(S.online){store.del('fld.online');if(S.syncT){clearInterval(S.syncT);S.syncT=null}}
+  if(S.online){store.del('fld.online');if(S.syncT){clearInterval(S.syncT);S.syncT=null}
+    onlineFetch({body:{action:'final',code:S.online.code,token:S.online.token,tot}}).then(()=>{S.league=null}).catch(()=>{})}
   S.history.unshift({at:Date.now(),names:[pname(me),pname(1-me)],tot:[tot[me],tot[1-me]],score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real'});
   S.history=S.history.slice(0,30);store.set('fld.history',S.history);
   if(f.kind==='real')store.del('fld.active');
@@ -1486,15 +1507,133 @@ function viewResult(){
     ${E.kind==='real'?'<p class="small muted" style="margin:0;text-align:center">Final points use the official full-match stats from API-Football.</p>':''}
     <div class="breakdown"><h3>${esc(pname(0))} · ${tot[0]} pts</h3>${lines(0)}</div>
     <div class="breakdown"><h3>${esc(pname(1))} · ${tot[1]} pts</h3>${lines(1)}</div>
-    <button class="linkbtn" id="copy">Copy result to share</button>
+    <button class="btn" id="card" style="background:linear-gradient(160deg,var(--gold),#ffb347);color:#2a1c00">📸 Share result card</button>
+    <button class="linkbtn" id="copy">Copy result as text</button>
   </section>
   <div class="actionbar"><div><button class="btn ghost" id="home">New match</button><button class="btn" id="again">Rematch</button></div></div>`;
   document.getElementById('home').onclick=()=>go('home');
   document.getElementById('again').onclick=()=>startDuel(f,S.mode==='friend'?1-S.first:0);
+  document.getElementById('card').onclick=ev=>shareCard(ev.currentTarget);
   document.getElementById('copy').onclick=()=>{
     const txt=`Football Live Duel: ${pname(0)} ${tot[0]} – ${tot[1]} ${pname(1)} (${TEAMS[f.home].name} ${t.hs}–${t.as} ${TEAMS[f.away].name}). ${w===-1?'Draw!':pname(w)+' wins!'}${w!==-1&&S.dares&&S.dares[w]&&S.dareOk[w]?` Forfeit for ${pname(1-w)}: ${S.dares[w]}`:''}`;
     try{navigator.clipboard.writeText(txt).then(()=>toast('Copied'),()=>toast(txt))}catch(e){toast(txt)}
   };
+}
+
+// ================= Friends and rankings (online duels only) =================
+async function leagueFetch(opts){
+  let r,b;try{r=await fetch('/api/league'+(opts.get?'?'+new URLSearchParams(opts.get):''),opts.body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(opts.body)}:{});b=await r.json()}
+  catch(e){throw new Error('No connection. Check your internet and try again.')}
+  if(!r.ok||b.error)throw new Error(b.error||'Something went wrong.');return b;
+}
+async function ensureProfile(name){
+  const me=store.get('fld.me',null);if(me&&me.id)return me;
+  try{const b=await leagueFetch({body:{action:'register',name:name||S.names[0]||'Player'}});const m={id:b.id,token:b.token};store.set('fld.me',m);return m}catch(e){return null}
+}
+async function loadLeague(){
+  const me=store.get('fld.me',null);if(!me){S.league=null;return}
+  S.leagueLoading=true;
+  try{S.league=await leagueFetch({get:{id:me.id,token:me.token}});S.leagueAt=Date.now();S.leagueErr=null}
+  catch(e){S.leagueErr=e.message;if(/not found/i.test(e.message)){store.del('fld.me');S.league=null}}
+  S.leagueLoading=false;
+  if(S.view==='profile'){const el=document.getElementById('league');if(el){el.innerHTML=leagueHtml();bindLeague()}}
+}
+function leagueHtml(){
+  const me=store.get('fld.me',null),L=S.league;
+  if(!me)return `<div class="lg"><h3>🏆 Friends league</h3><p class="small muted" style="margin:0">Make your player card to add friends, see win streaks and climb the rankings. Only online duels count, so every win is against a real friend.</p>
+    <div class="addf"><input id="lgname" maxlength="14" placeholder="Your player name" value="${esc(S.names[0]&&S.names[0]!=='You'?S.names[0]:'')}"><button class="btn" id="lgmake" style="padding:10px 14px">Create</button></div></div>`;
+  if(!L)return `<div class="lg"><h3>🏆 Friends league</h3>${S.leagueErr?`<p class="small" style="color:var(--red);margin:0">${esc(S.leagueErr)}</p>`:'<div class="spin"></div>'}</div>`;
+  const m=L.me,rank=L.friends.slice().sort((a,b)=>b.w-a.w||b.streak-a.streak||b.pts-a.pts);
+  const row=(p,n)=>`<div class="lrow ${p.id===m.id?'me':''}"><span class="rk">${n+1}</span><span class="ln"><b>${esc(p.name)}${p.id===m.id?' (you)':''}</b><small>${p.w}W ${p.d}D ${p.l}L${p.streak>1?` · 🔥 ${p.streak} in a row`:''}</small></span><b class="num lw">${p.w}</b>${p.id!==m.id&&rank===L.friends?'':''}</div>`;
+  return `<div class="lg">
+    <div class="pcard"><div><span class="eyebrow">Your player card</span><b>${esc(m.name)}</b><small>Friend code <code>${esc(m.id)}</code></small></div>
+      <div class="pst"><div><b class="num">${m.w}</b><span>Wins</span></div><div><b class="num">${m.streak}</b><span>Streak</span></div><div><b class="num">${m.best}</b><span>Best</span></div></div></div>
+    <div class="addf"><input id="lgcode" maxlength="8" placeholder="Friend code" autocapitalize="off"><button class="btn ghost" id="lgadd" style="padding:10px 14px">Add</button><button class="btn" id="lginv" style="padding:10px 14px">Invite</button></div>
+    <p class="small muted" style="margin:0">Friends you duel online are added automatically.</p>
+    <h3 style="margin-top:6px">Friends ranking</h3>
+    <div class="ltable">${rank.length>1?rank.map(row).join(''):`${row(m,0)}<div class="empty" style="padding:12px">Add a friend or play an online duel to start your league.</div>`}</div>
+    ${L.top&&L.top.length?`<h3 style="margin-top:6px">Top players</h3><div class="ltable">${L.top.slice(0,10).map(row).join('')}</div>`:''}
+  </div>`;
+}
+function bindLeague(){
+  const mk=document.getElementById('lgmake');
+  if(mk)mk.onclick=async()=>{const n=document.getElementById('lgname').value.trim();if(!n){toast('Pick a name first');return}mk.disabled=true;
+    const nm=store.get('fld.names',['You','Friend']);nm[0]=n;store.set('fld.names',nm);S.names[0]=n;
+    const me=await ensureProfile(n);if(!me){toast('Could not create your card. Try again.');mk.disabled=false;return}loadLeague()};
+  const ad=document.getElementById('lgadd');
+  if(ad)ad.onclick=async()=>{const me=store.get('fld.me',null),code=document.getElementById('lgcode').value.trim().toLowerCase();if(!code)return;
+    try{await leagueFetch({body:{action:'addfriend',id:me.id,token:me.token,code}});toast('Friend added');loadLeague()}catch(e){toast(e.message)}};
+  const iv=document.getElementById('lginv');
+  if(iv)iv.onclick=async()=>{const me=store.get('fld.me',null);const url=location.origin+location.pathname+'#friend-'+me.id;const msg=`Add me on Football Live Duel and let's duel on the next match ⚽ ${url}`;
+    try{if(navigator.share){await navigator.share({text:msg});return}}catch(e){if(e&&e.name==='AbortError')return}
+    try{await navigator.clipboard.writeText(msg);toast('Invite copied')}catch(e){toast(url)}};
+}
+async function openFriendLink(code){
+  history.replaceState(null,'',location.pathname);
+  let me=store.get('fld.me',null);
+  if(!me)me=await ensureProfile(S.names[0]&&S.names[0]!=='You'?S.names[0]:'Player');
+  if(me&&me.id!==code){try{await leagueFetch({body:{action:'addfriend',id:me.id,token:me.token,code}});toast('Friend added to your league')}catch(e){toast(e.message)}}
+  S.league=null;go('profile');
+}
+
+// ================= Share card (1080×1920 story image) =================
+async function resultCard(){
+  const f=S.fixture,E=S.eng,t=E.tally(),a=powerAdjust(),sc=[0,1].map(i=>sideScore(i,t,a)),tot=sc.map(x=>x.total);
+  const w=tot[0]>tot[1]?0:tot[1]>tot[0]?1:-1;
+  try{await document.fonts.load('800 100px "Barlow Condensed"');await document.fonts.load('600 40px Inter')}catch(e){}
+  const W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+  const D='"Barlow Condensed","Arial Narrow",sans-serif',I='Inter,system-ui,sans-serif';
+  const ACC='#64efb0',GOLD='#ffd77c',MUT='#a9bbcf',TXT='#edf5ff';
+  // Background: night pitch
+  let g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0b1a2c');g.addColorStop(.55,'#08111e');g.addColorStop(1,'#04241a');x.fillStyle=g;x.fillRect(0,0,W,H);
+  g=x.createRadialGradient(W/2,560,40,W/2,560,760);g.addColorStop(0,w===-1?'rgba(169,187,207,.22)':'rgba(255,215,124,.28)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.strokeStyle='rgba(255,255,255,.06)';x.lineWidth=4;
+  for(let i=0;i<8;i++){x.fillStyle=i%2?'rgba(255,255,255,.015)':'rgba(0,0,0,0)';x.fillRect(0,1080+i*105,W,105)}
+  x.beginPath();x.moveTo(0,1660);x.lineTo(W,1660);x.stroke();
+  x.strokeRect(-4,60,W+8,H-120);
+  const txt=(s,X,Y,font,col,al='center',ls=0)=>{x.font=font;x.fillStyle=col;x.textAlign=al;if('letterSpacing' in x)x.letterSpacing=ls+'px';x.fillText(s,X,Y);if('letterSpacing' in x)x.letterSpacing='0px'};
+  const fit=(s,max,size,weight,fam)=>{let z=size;x.font=`${weight} ${z}px ${fam}`;while(x.measureText(s).width>max&&z>20){z-=4;x.font=`${weight} ${z}px ${fam}`}return `${weight} ${z}px ${fam}`};
+  // Header
+  txt('FOOTBALL',W/2,190,`800 92px ${D}`,TXT,'center',6);
+  x.font=`800 92px ${D}`;const lw=x.measureText('LIVE').width+52,dw=x.measureText('DUEL').width,sx=W/2-(lw+dw)/2;
+  txt('LIVE',sx,280,`800 92px ${D}`,ACC,'left',6);txt('DUEL',sx+lw,280,`800 92px ${D}`,TXT,'left',6);
+  // Match
+  const ms=`${TEAMS[f.home].name}  ${t.hs} – ${t.as}  ${TEAMS[f.away].name}`;
+  x.fillStyle='rgba(255,255,255,.07)';x.beginPath();x.roundRect?x.roundRect(90,340,W-180,92,46):x.rect(90,340,W-180,92);x.fill();
+  txt(ms,W/2,402,fit(ms,W-240,40,'600',I),TXT);
+  // Verdict
+  txt(w===-1?'🤝':'🏆',W/2,640,`160px ${I}`,GOLD);
+  const v=w===-1?'DRAW':`${pname(w).toUpperCase()} ${pname(w)==='You'?'WIN':'WINS'}`;
+  txt(v,W/2,800,fit(v,W-160,150,'800',D),w===-1?TXT:GOLD,'center',2);
+  const n=k=>k<0?'−'+(-k):String(k);
+  txt(`${n(tot[0])} : ${n(tot[1])}`,W/2,1010,`800 230px ${D}`,TXT);
+  txt(`${pname(0).toUpperCase()}   VS   ${pname(1).toUpperCase()}`,W/2,1080,fit(`${pname(0)}   VS   ${pname(1)}`.toUpperCase(),W-200,44,'700',D),MUT,'center',4);
+  // Players: best of each side
+  const shirtAt=(id,cx,cy,sz)=>{const p=PL[id],c=TEAMS[p.team]?TEAMS[p.team].color:'#8899aa',k=sz/64;x.save();x.translate(cx-sz/2,cy-sz*0.44);x.scale(k,k);
+    x.fillStyle=c;x.fill(new Path2D('M21 3 9 9 2 22l10 5 3-5v32h34V22l3 5 10-5-7-13-12-6c-2 5-6 8-11 8s-9-3-11-8z'));x.restore();
+    const num=p.num!=null&&p.num!==''?String(p.num):(p.pos||'');txt(num,cx,cy+sz*0.2,`800 ${sz*0.3}px ${D}`,'#06121f')};
+  [0,1].forEach(i=>{const cx=i===0?W*0.27:W*0.73;const rows=sc[i].rows.slice().sort((p,q)=>q.pts-p.pts),best=rows[0];
+    x.fillStyle=w===i?'rgba(255,215,124,.10)':'rgba(255,255,255,.05)';x.strokeStyle=w===i?'rgba(255,215,124,.5)':'rgba(255,255,255,.12)';x.lineWidth=3;
+    x.beginPath();x.roundRect?x.roundRect(cx-215,1180,430,420,36):x.rect(cx-215,1180,430,420);x.fill();x.stroke();
+    txt(pname(i).toUpperCase(),cx,1245,fit(pname(i).toUpperCase(),380,46,'800',D),w===i?GOLD:MUT,'center',3);
+    if(best){shirtAt(best.id,cx,1360,150);txt(PL[best.id].name,cx,1490,fit(PL[best.id].name,380,40,'700',I),TXT);
+      txt(`${n(best.pts)} pts · top scorer`,cx,1545,`500 30px ${I}`,MUT)}});
+  // Forfeit
+  let fy=1700;
+  if(w!==-1&&S.dares&&S.dares[w]&&S.dareOk[w]){txt('🔓 FORFEIT UNLOCKED',W/2,fy,`800 44px ${D}`,GOLD,'center',4);
+    const q=`${pname(1-w)} must: “${S.dares[w]}”`;txt(q,W/2,fy+62,fit(q,W-160,38,'600',I),TXT)}
+  else txt('Pick 2 players. Watch live. Beat your friends.',W/2,fy,`500 34px ${I}`,MUT);
+  txt((location.host||'football-live-duel.vercel.app').toUpperCase(),W/2,H-90,`700 34px ${D}`,ACC,'center',6);
+  return await new Promise(r=>cv.toBlob(r,'image/png'));
+}
+async function shareCard(btn){
+  const old=btn.textContent;btn.disabled=true;btn.textContent='Making your card…';
+  try{
+    const blob=await resultCard();const file=new File([blob],'football-live-duel-result.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]})}catch(e){if(e.name!=='AbortError')throw e}}
+    else{const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Image saved')}
+  }catch(e){toast('Could not make the image')}
+  btn.disabled=false;btn.textContent=old;
 }
 function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
 
@@ -1504,6 +1643,7 @@ function viewProfile(){
   app.innerHTML=`<section class="screen">
     <div><div class="eyebrow">Profile</div><h2 style="font-size:2.4rem;text-transform:uppercase">${esc(S.names[0]||'You')}</h2></div>
     <div class="record"><div><b class="num" style="color:var(--accent)">${c.W}</b><span>Won</span></div><div><b class="num">${c.D}</b><span>Drawn</span></div><div><b class="num" style="color:var(--red)">${c.L}</b><span>Lost</span></div></div>
+    <div id="league">${leagueHtml()}</div>
     <div class="section-title"><h2 style="font-size:1.2rem">Recent duels</h2><span class="small muted">Saved on this phone</span></div>
     <div class="hist">${h.length?h.map(x=>{const tm=x.teams||['',''];return `<div class="hrow"><span class="res ${x.out}">${x.out}</span>
       <div style="min-width:0"><b style="font-weight:600">vs ${esc(x.names[1])}</b><div class="small muted">${esc(tm[0])} ${x.score[0]}–${x.score[1]} ${esc(tm[1])} · ${x.real?'Real match':'Practice'} · ${new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</div></div>
@@ -1511,12 +1651,13 @@ function viewProfile(){
       :`<div class="empty">No duels yet. Pick a match on the Matches tab to play your first one.</div>`}</div>
     ${h.length?'<button class="linkbtn" id="clear">Clear history</button>':''}
   </section>`;
+  bindLeague();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
   const cl=document.getElementById('clear');
   if(cl)cl.onclick=()=>{if(cl.dataset.sure){S.history=[];store.set('fld.history',[]);render()}else{cl.dataset.sure=1;cl.textContent='Tap again to clear all duels'}};
 }
 
-const hm=location.hash.match(/^#duel-([a-z0-9]{8})$/);
-if(hm)openOnline(hm[1]);else render();
+const hm=location.hash.match(/^#duel-([a-z0-9]{8})$/),hf=location.hash.match(/^#friend-([a-z0-9]{8})$/);
+if(hm)openOnline(hm[1]);else if(hf)openFriendLink(hf[1]);else render();
 })();
 
 </script>

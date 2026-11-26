@@ -59,6 +59,13 @@ function view(d, slot) {
   return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, chat: slot >= 0 ? d.chat : [] };
 }
 
+// Link a duel player to their profile (api/league.js) so the result counts in the rankings
+async function profileId(pid, ptok) {
+  if (!/^[a-z0-9]{8}$/.test(String(pid || '')) || !ptok) return null;
+  const [v] = await redis([['GET', 'pl:' + pid]]);
+  return v && JSON.parse(v).tok === hashTok(ptok) ? pid : null;
+}
+
 function slotOf(d, token) {
   const h = hashTok(token);
   return d.p.findIndex(p => p && p.tok === h);
@@ -96,7 +103,7 @@ export default async function handler(req, res) {
       const k = 'duel:' + meta.code;
       await redis([
         ['SET', k + ':meta', JSON.stringify(meta), 'EX', String(TTL)],
-        ['SET', k + ':p0', JSON.stringify({ name: clean(b.name, 14) || 'Player 1', tok: hashTok(token) }), 'EX', String(TTL)],
+        ['SET', k + ':p0', JSON.stringify({ name: clean(b.name, 14) || 'Player 1', tok: hashTok(token), pid: await profileId(b.pid, b.ptok) }), 'EX', String(TTL)],
       ]);
       const d = await load(meta.code);
       return res.status(200).json({ token, state: view(d, 0) });
@@ -115,7 +122,8 @@ export default async function handler(req, res) {
         return res.status(409).json({ error: 'Two players are already in this duel.' });
       }
       const token = crypto.randomBytes(18).toString('hex');
-      const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: clean(b.name, 14) || 'Player 2', tok: hashTok(token) }), 'EX', String(TTL), 'NX']]);
+      const pid = await profileId(b.pid, b.ptok);
+      const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: clean(b.name, 14) || 'Player 2', tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
       if (!ok[0]) return res.status(409).json({ error: 'Two players are already in this duel.' });
       const d2 = await load(code);
       return res.status(200).json({ token, state: view(d2, 1) });
@@ -147,6 +155,28 @@ export default async function handler(req, res) {
       lastSay.set(lk, now); if (lastSay.size > 5000) lastSay.clear();
       const m = { s: slot, t: text, e: b.emoji ? 1 : 0, at: now, id: crypto.randomBytes(4).toString('hex') };
       await redis([['RPUSH', k + ':chat', JSON.stringify(m)], ['LTRIM', k + ':chat', '-200', '-1'], ['EXPIRE', k + ':chat', String(TTL)]]);
+    } else if (b.action === 'final') {
+      // First phone to reach full time records the result; it counts once for both profiles
+      const other = d.p[1 - slot];
+      if (!me.ready || !other || !other.ready) return res.status(409).json({ error: 'The duel has not started.' });
+      const tot = (Array.isArray(b.tot) ? b.tot : []).slice(0, 2).map(v => Math.max(-9999, Math.min(9999, Math.round(Number(v) || 0))));
+      if (tot.length !== 2) return res.status(400).json({ error: 'Invalid result.' });
+      const [first] = await redis([['SET', k + ':final', JSON.stringify({ tot, by: slot, at: Date.now() }), 'EX', String(TTL), 'NX']]);
+      const pids = [d.p[0].pid, d.p[1].pid];
+      if (first && pids[0] && pids[1] && pids[0] !== pids[1]) {
+        const [a, c] = await redis([['MGET', 'pl:' + pids[0], 'pl:' + pids[1]]]).then(([v]) => v);
+        const profs = [a, c].map(x => x && JSON.parse(x));
+        const cmds = [];
+        profs.forEach((pr, i) => {
+          if (!pr) return;
+          const res2 = tot[i] > tot[1 - i] ? 'w' : tot[i] < tot[1 - i] ? 'l' : 'd';
+          pr[res2] = (pr[res2] || 0) + 1; pr.games = (pr.games || 0) + 1; pr.pts = (pr.pts || 0) + tot[i];
+          pr.streak = res2 === 'w' ? (pr.streak || 0) + 1 : 0; pr.best = Math.max(pr.best || 0, pr.streak);
+          cmds.push(['SET', 'pl:' + pids[i], JSON.stringify(pr)], ['ZADD', 'lb:wins', String(pr.w || 0), pids[i]]);
+        });
+        cmds.push(['SADD', 'fr:' + pids[0], pids[1]], ['SADD', 'fr:' + pids[1], pids[0]]);
+        await redis(cmds);
+      }
     } else if (b.action === 'start') {
       // First phone to open the live match records the starting point; the other phone reuses it.
       const other = d.p[1 - slot];
