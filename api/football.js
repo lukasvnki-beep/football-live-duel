@@ -42,7 +42,7 @@ function cacheSeconds(path, q) {
   if (path === 'players/squads') return 86400;
   if (path === 'fixtures/lineups') return 300;
   // Live match: when the daily quota runs low, keep answers longer so all phones share fewer API calls
-  if (path === 'fixtures' && (q.id || q.live)) return quotaLeft != null && quotaLeft < 120 ? 150 : 55;
+  if (path === 'fixtures' && (q.id || q.live)) return quotaLeft != null && quotaLeft < 60 ? 180 : quotaLeft != null && quotaLeft < 120 ? 150 : 55;
   if (path === 'fixtures' && q.date) {
     const today = new Date().toISOString().slice(0, 10);
     return q.date < today ? 86400 : 600;   // past days never change

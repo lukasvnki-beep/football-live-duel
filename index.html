@@ -1354,7 +1354,7 @@ function realEngine(f,replay,start){
     schedule(){
       clearTimeout(E.pollT);if(E.done){finishDuel();return}
       const low=S.left!=null&&S.left<300,vlow=S.left!=null&&S.left<120; // free plan: stretch requests so one full match fits in a day
-      const wait=E.status==='HT'?(vlow?300000:180000):LIVE.has(E.status)?(vlow?150000:low?90000:60000):(E.status==='NS'||E.status==='TBD')?Math.min(300000,Math.max(60000,new Date(f.kickoff)-Date.now())):120000;
+      const wait=E.status==='HT'?(vlow?300000:180000):LIVE.has(E.status)?(S.left!=null&&S.left<60?180000:vlow?150000:low?90000:60000):(E.status==='NS'||E.status==='TBD')?Math.min(300000,Math.max(60000,new Date(f.kickoff)-Date.now())):120000;
       const w2=S.preview?Math.min(wait,20000):wait;E.nextAt=Date.now()+w2;
       E.pollT=setTimeout(async()=>{await E.fetch();if(S.view==='live')updateLive();E.schedule()},w2);
     },
