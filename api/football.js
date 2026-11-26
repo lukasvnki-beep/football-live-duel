@@ -37,6 +37,9 @@ const RESERVE = 15;                 // keep the last requests of the day for liv
 const memo = new Map();             // in-function cache: key -> {until, body}
 const visitors = new Map();         // ip -> {start, count}
 let quotaLeft = null;
+let blockedUntil = 0;               // account problem at API-Football (suspended, bad key…): stop calling for a while
+const ACCOUNT_ERR = /suspend|subscription|account|api key|token|access/i;
+const UNAVAILABLE = 'Real matches are unavailable right now because the football data account has a problem.';
 
 function cacheSeconds(path, q) {
   if (path === 'players/squads') return 86400;
@@ -87,6 +90,12 @@ export default async function handler(req, res) {
   const hit = memo.get(cacheKey);
   if (hit && hit.until > Date.now()) return res.status(200).json(hit.body);
 
+  // Account blocked at API-Football: answer straight away, and let the CDN absorb repeats
+  if (blockedUntil > Date.now()) {
+    res.setHeader('Cache-Control', 'public, s-maxage=300');
+    return res.status(503).json({ errors: { account: UNAVAILABLE }, unavailable: true });
+  }
+
   // Per-visitor limit on fresh API calls
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   const now = Date.now();
@@ -115,6 +124,12 @@ export default async function handler(req, res) {
     const ttl2 = cacheSeconds(path, picked);
     res.setHeader('Cache-Control', `public, s-maxage=${ttl2}, stale-while-revalidate=${ttl2}`);
     const errs = body && body.errors && (Array.isArray(body.errors) ? body.errors.length : Object.keys(body.errors).length);
+    const errText = errs ? JSON.stringify(body.errors) : '';
+    if (errs && ACCOUNT_ERR.test(errText)) {
+      blockedUntil = Date.now() + 10 * 60e3;
+      res.setHeader('Cache-Control', 'public, s-maxage=300');
+      return res.status(503).json({ errors: { account: UNAVAILABLE }, unavailable: true });
+    }
     if (r.ok && !errs) memo.set(cacheKey, { until: Date.now() + ttl2 * 1000, body });
     else res.setHeader('Cache-Control', 'no-store');
     return res.status(r.ok ? 200 : r.status).json(body);
