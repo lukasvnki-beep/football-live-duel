@@ -461,7 +461,7 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.fx{display:none}}
 </style>
 
-<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg,#08111e);z-index:40;pointer-events:none}[hidden]{display:none!important}</style>
 </head><body>
 <div class="app" id="app"></div>
 <nav class="tabbar" id="tabbar" aria-label="Main">
