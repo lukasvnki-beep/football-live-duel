@@ -292,6 +292,39 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .lrow .ln b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lrow .ln small{color:var(--muted);font-size:.72rem}
 .lrow .lw{font-family:var(--display);font-size:1.3rem;color:var(--accent)}
+.tabbar div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.tabbar button{padding:6px 2px;border-radius:12px;font-weight:600;font-size:.68rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.tabbar svg{width:22px;height:22px}
+.screen.enter{animation:enter .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.skel{border-radius:16px;background:linear-gradient(90deg,var(--panel) 0%,var(--panel2) 50%,var(--panel) 100%);background-size:200% 100%;animation:shimmer 1.2s infinite linear;border:1px solid var(--line)}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.splash{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 30%,#123a2b 0%,#08111e 60%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;transition:opacity .5s,transform .5s}
+.splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.sp-ball{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 30%,#cfd8e3 60%,#8a9bb0);box-shadow:0 10px 30px rgba(100,239,176,.35);animation:bounce .9s cubic-bezier(.3,.7,.4,1) infinite alternate}
+@keyframes bounce{from{transform:translateY(-26px) rotate(0)}to{transform:translateY(6px) rotate(200deg)}}
+.sp-logo{font-family:var(--display);font-weight:800;font-size:2.6rem;line-height:.95;text-align:center;letter-spacing:.04em;animation:pop .6s .1s both}
+.sp-logo span{color:var(--accent)}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+.sp-bar{width:120px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+.sp-bar i{display:block;height:100%;width:40%;background:var(--accent);border-radius:2px;animation:load .9s ease-in-out infinite}
+@keyframes load{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+.onboard{min-height:70vh;justify-content:center}
+.ob-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px}
+.ob-track::-webkit-scrollbar{display:none}
+.ob-track .ob-card{flex:0 0 100%;scroll-snap-align:center;padding:0 16px;box-sizing:border-box}
+.ob-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px}
+.ob-card h2{font-size:2.2rem;text-transform:uppercase}
+.ob-card p{color:var(--muted);max-width:32ch;margin:0}
+.ob-card input{width:100%;max-width:320px;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--text);padding:14px;font:inherit;font-size:18px;text-align:center}
+.ob-i{font-size:4.5rem;width:120px;height:120px;border-radius:32px;display:grid;place-items:center;background:linear-gradient(150deg,var(--panel2),var(--panel));border:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.ob-dots{display:flex;gap:8px;justify-content:center}
+.ob-dots i{width:8px;height:8px;border-radius:4px;background:var(--line);transition:width .2s}
+.ob-dots i.on{width:22px;background:var(--accent)}
+.steps{display:flex;flex-direction:column;gap:8px}
+.steps div{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.steps b{font-family:var(--display);font-size:1.6rem;color:var(--accent);width:28px;text-align:center}
+@media (prefers-reduced-motion:reduce){.screen.enter,.sp-ball,.sp-bar i,.skel,.sp-logo{animation:none}}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.88rem;z-index:9}
 
 /* Profile */
@@ -366,10 +399,14 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 <div class="app" id="app"></div>
 <nav class="tabbar" id="tabbar" aria-label="Main">
   <div>
-    <button id="tab-home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg>Matches</button>
-    <button id="tab-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</button>
+    <button id="tab-home" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg>Play</button>
+    <button id="tab-friends" data-tab="friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5M15 14.5c2.5 0 4.5 1.5 5.5 4.5"/></svg>Friends</button>
+    <button id="tab-ranking" data-tab="ranking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21V11h8v10M3 21v-6h5M16 21v-8h5v8M2 21h20"/></svg>Ranking</button>
+    <button id="tab-profile" data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</button>
+    <button id="tab-rules" data-tab="rules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h4"/></svg>Rules</button>
   </div>
 </nav>
+<div class="splash" id="splash" aria-hidden="true"><div class="sp-ball"></div><div class="sp-logo">FOOTBALL<br><span>LIVE</span> DUEL</div><div class="sp-bar"><i></i></div></div>
 <script>
 (function(){
 // ================= Shared registry =================
@@ -483,17 +520,17 @@ const crest=(tid,cls='')=>`<span class="crest ${cls}" style="background:${TEAMS[
 const pname=i=>i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||(S.mode==='online'?'your friend':'Friend')));
 const backBtn=`<button class="back" id="back" aria-label="Back to matches"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></button>`;
 
-function go(view){S.view=view;if(!['wait','reveal','live','join'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
+function go(view){S.view=view;if(view==='live'&&S.reactEng!==S.eng){S.reactEng=S.eng;S.reactSeen=null;S.reactInit=false}if(!['wait','reveal','live','join'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
   if(view==='home'&&S.mode==='online')S.names=store.get('fld.names',['You','Friend']);
   render();window.scrollTo(0,0);chatUI()}
 function render(){
-  tabbar.hidden=!(S.view==='home'||S.view==='profile');
-  document.getElementById('tab-home').setAttribute('aria-current',S.view==='home'?'page':'false');
-  document.getElementById('tab-profile').setAttribute('aria-current',S.view==='profile'?'page':'false');
-  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin})[S.view]();
+  const TABS=['home','friends','ranking','profile','rules'];
+  tabbar.hidden=!TABS.includes(S.view);
+  tabbar.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===S.view?'page':'false'));
+  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin,friends:viewFriends,ranking:viewRanking,rules:viewRules,onboard:viewOnboard})[S.view]();
+  const sc=app.querySelector('.screen');if(sc&&S.lastView!==S.view){sc.classList.add('enter')}S.lastView=S.view;
 }
-document.getElementById('tab-home').onclick=()=>go('home');
-document.getElementById('tab-profile').onclick=()=>go('profile');
+tabbar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{buzz(8);go(b.dataset.tab)});
 
 // ================= Home =================
 function dayChoices(){const t=new Date();return [-1,0,1,2].map(o=>{const d=new Date(t);d.setDate(t.getDate()+o);return {iso:isoDay(d),label:o===-1?'Yesterday':o===0?'Today':o===1?'Tomorrow':d.toLocaleDateString([], {weekday:'short',day:'numeric'})}})}
@@ -512,7 +549,7 @@ function viewHome(){
   let list='';
   if(S.src==='sim'){
     list=`<div class="fixtures">${SIM_FIXTURES.map(fixtureCard).join('')}</div>`;
-  }else if(S.fxLoading){list='<div class="note"><div class="spin"></div></div>'}
+  }else if(S.fxLoading){list='<div class="fixtures">'+[0,1,2].map(()=>'<div class="skel" style="height:150px"></div>').join('')+'</div>'}
   else if(S.fxErr){list=`<div class="note err"><b>Couldn't load matches.</b> ${esc(S.fxErr)}<br><button class="linkbtn" id="retry" style="padding:6px 0">Try again</button></div>`}
   else if(S.fixtures){
     const fx=S.fixtures.filter(f=>!S.topOnly||TOP_LEAGUES.has(f.leagueId));
@@ -547,37 +584,6 @@ function viewHome(){
     ${list}
     ${S.preview?'<div class="prevbanner">🧪 Preview version: these are fake matches, so no API requests are used.</div>':''}
     ${S.src==='real'&&S.left!=null?`<p class="small muted" style="margin:0;text-align:center">${S.left} data requests left today on your API plan</p>`:''}
-    <div class="rules">
-      <h3>How points work</h3>
-      <div class="ptable">
-        <span>Goal</span><span class="pos">+40</span>
-        <span>Assist</span><span class="pos">+25</span>
-        <span>Penalty saved (goalkeeper)</span><span class="pos">+20</span>
-        <span>Penalty won</span><span class="pos">+10</span>
-        <span>Shot on target</span><span class="pos">+6</span>
-        <span>Goalkeeper save</span><span class="pos">+6</span>
-        <span>Key pass (a pass that leads to a shot)</span><span class="pos">+5</span>
-        <span>Successful dribble</span><span class="pos">+4</span>
-        <span>Tackle</span><span class="pos">+4</span>
-        <span>Interception</span><span class="pos">+4</span>
-        <span>Shot off target</span><span class="pos">+2</span>
-        <span>Duel won</span><span class="pos">+2</span>
-        <span>Foul won</span><span class="pos">+2</span>
-        <span>Completed pass</span><span class="pos">+1</span>
-        <span>Missed pass</span><span class="neg">−1</span>
-        <span>Foul committed</span><span class="neg">−3</span>
-        <span>Yellow card</span><span class="neg">−10</span>
-        <span>Penalty missed</span><span class="neg">−15</span>
-        <span>Red card (second yellow: −25 in total)</span><span class="neg">−25</span>
-      </div>
-      <h3 style="margin-top:14px">Power-ups</h3>
-      <div class="ptable">
-        <span>⚡ Double Points: everything your chosen player earns counts double</span><span>10 min</span>
-        <span>☠ Negative Points: everything one of your rival's players earns counts as minus</span><span>5 min</span>
-      </div>
-      <p class="small muted" style="margin:10px 0 0">Each of you gets one of each per match. Use them while the ball is in play. Timing is in match minutes.</p>
-      <p class="small muted" style="margin:10px 0 0">Both of you can pick the same player. Pick before kickoff. Practice matches score goals, assists and cards only. Finished real matches are replayed minute by minute.</p>
-    </div>
   </section>`;
   const saveNames=()=>{S.names=[document.getElementById('n1').value.trim()||'You',(document.getElementById('n2')?.value.trim())||store.get('fld.names',['',''])[1]||'Friend'];store.set('fld.names',S.names)};
   document.getElementById('n1').onchange=saveNames;
@@ -643,7 +649,7 @@ function viewDraft(){
   const ids=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].filter(id=>S.filter==='all'||PL[id].team===S.filter);
   const list=f.kind==='real'?ids.slice().sort((a,b)=>(PL[b].starter?1:0)-(PL[a].starter?1:0)||(PL[a].team===f.home?0:1)-(PL[b].team===f.home?0:1)||POSORDER[PL[a].pos]-POSORDER[PL[b].pos]):ids;
   let body;
-  if(S.draftLoading)body='<div class="note"><div class="spin"></div><p style="margin:8px 0 0;text-align:center">Loading players…</p></div>';
+  if(S.draftLoading)body='<div class="plist">'+Array.from({length:7},()=>'<div class="skel" style="height:60px"></div>').join('')+'</div>';
   else if(S.draftErr)body=`<div class="note err"><b>Couldn't load players.</b> ${esc(S.draftErr)}<br><button class="linkbtn" id="retry" style="padding:6px 0">Try again</button></div>`;
   else body=`<div class="plist">${list.map(id=>{const p=PL[id];return `
       <button class="prow" data-p="${id}" aria-pressed="${mine.includes(id)}">
@@ -660,7 +666,7 @@ function viewDraft(){
       <div><div class="small muted">Now picking</div><h3>${esc(pname(i))}</h3></div>
       <div class="slots" aria-label="${mine.length} of 2 picked"><span class="slot ${mine.length>0?'on':''}"></span><span class="slot ${mine.length>1?'on':''}"></span></div>
     </div>
-    ${mine.length===2?`<div class="captrow"><span><b>Captain</b> <span class="muted small">scores ×1.5, good and bad</span></span><div class="capbtns">${mine.map((id,k)=>`<button data-capt="${k}" aria-pressed="${(S.capt[i]||0)===k}">${(S.capt[i]||0)===k?'Ⓒ ':''}${esc(PL[id].name)}</button>`).join('')}</div></div>`:''}
+    ${CAPTAIN&&mine.length===2?`<div class="captrow"><span><b>Captain</b> <span class="muted small">scores ×1.5, good and bad</span></span><div class="capbtns">${mine.map((id,k)=>`<button data-capt="${k}" aria-pressed="${(S.capt[i]||0)===k}">${(S.capt[i]||0)===k?'Ⓒ ':''}${esc(PL[id].name)}</button>`).join('')}</div></div>`:''}
     <div class="filter" role="group" aria-label="Filter by team">
       <button data-flt="all" aria-pressed="${S.filter==='all'}">Both</button>
       <button data-flt="${f.home}" aria-pressed="${S.filter===f.home}">${esc(TEAMS[f.home].short)}</button>
@@ -734,7 +740,7 @@ function duelPanel(live){
   const act=live?activePowers():[],blk=blockedNegs(),ok=live&&inPlay(E),off=E&&E.sentOff?E.sentOff:new Set();
   return `<div class="duel">${SIDES().map(i=>{
     const cur=live?current(i):S.picks[i];
-    const cards=cur.map((id,k)=>{const p=PL[id];const cap=(S.capt[i]||0)===k;
+    const cards=cur.map((id,k)=>{const p=PL[id];const cap=CAPTAIN&&(S.capt[i]||0)===k;
       let v=0,prev='';
       if(sc){const rows=sc[i].rows.filter(r=>r.k===k);const ids=[...new Set(rows.map(r=>r.id))];
         v=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,pid)=>x+sc[i].adjOf(pid),0);if(cap)v+=sc[i].cap;
@@ -782,7 +788,7 @@ function drawSheet(){
     sh.onclick=ev=>{const b=ev.target.closest('button');if(!b||b.disabled)return;
       if(b.dataset.close){closeSheet();return}
       if(b.dataset.pw){const [o,tp]=b.dataset.pw.split(':');if(tp==='shield'){activatePower(+o,'shield',null);closeSheet();return}S.pwPick={owner:+o,type:tp};drawSheet();return}
-      if(b.dataset.pwt){const pk=S.pwPick;activatePower(pk.owner,pk.type,b.dataset.pwt);closeSheet();return}
+      if(b.dataset.pwt){const pk=S.pwPick;activatePower(pk.owner,pk.type,b.dataset.pwt);buzz(40);closeSheet();return}
       if(b.dataset.pwx){S.pwPick=null;drawSheet();return}
       if(b.dataset.swin){doSwap(S.sheet.owner,S.sheet.k,b.dataset.swin);closeSheet();return}}}
   const sw=S.sheet.kind==='swap';
@@ -794,6 +800,7 @@ const DARES=['Buys the next kebab','Wears my team\'s shirt tomorrow','Posts the 
 // ================= Power-ups =================
 const POWER={double:{dur:10,label:'Double Points',icon:'⚡',desc:'One of your players scores ×2 for 10 min'},neg:{dur:5,label:'Negative Points',icon:'☠',desc:'One of their players scores minus for 5 min'},shield:{dur:15,label:'Shield',icon:'🛡',desc:'Blocks the next Negative Points used on you in the next 15 min'}};
 const PTYPES=['double','neg','shield'];
+const CAPTAIN=false; // Lukas: no captain for now
 function resetPowers(){S.powers=[];S.swaps=[];S.pwPick=null;S.pwFeed=[];const r=(a,b)=>a+Math.floor(Math.random()*(b-a));S.cpuPlan={double:r(12,70),neg:r(15,78),shield:r(10,60)}}
 resetPowers();
 function nowMin(E){if(E.kind==='sim')return E.cursor+1;if(E.replay&&!E.final)return E.cursor;return E.elapsed||0}
@@ -898,7 +905,7 @@ function sideScore(i,t,a){
   const ids=[...new Set(rows.map(r=>r.id))];
   const adjOf=id=>a.adj[i][id]||0;
   let total=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,id)=>x+adjOf(id),0);
-  const ck=S.capt?S.capt[i]:null;let cap=0;
+  const ck=CAPTAIN&&S.capt?S.capt[i]:null;let cap=0;
   if(ck!=null){const cs=rows.filter(r=>r.k===ck);const base=cs.reduce((x,r)=>x+r.pts,0)+[...new Set(cs.map(r=>r.id))].reduce((x,id)=>x+adjOf(id),0);cap=Math.round(base*0.5)}
   return {rows,adjOf,cap,total:total+cap};
 }
@@ -1032,7 +1039,7 @@ function viewWait(){
   const msg=`⚽ Duel me on ${TEAMS[f.home].name} vs ${TEAMS[f.away].name}! Pick your 2 players here: ${url}`;
   app.innerHTML=`<section class="screen">
     <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${esc(TEAMS[f.home].short)} vs ${esc(TEAMS[f.away].short)} · Online duel</div><h2>Your picks are locked</h2></div></div>
-    <div class="duel" style="grid-template-columns:1fr"><div class="side"><div class="sh"><div class="who">${esc(pname(o.slot))}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${S.picks[o.slot].map((id,k)=>`<div class="sc ${(S.capt[o.slot]||0)===k?'cap':''}">${(S.capt[o.slot]||0)===k?'<span class="cb">C</span>':''}${shirt(id)}<b class="nm">${esc(PL[id].name)}</b><span class="sub">${PL[id].pos||'–'} · ${esc(TEAMS[PL[id].team].short)}</span></div>`).join('')}</div></div></div>
+    <div class="duel" style="grid-template-columns:1fr"><div class="side"><div class="sh"><div class="who">${esc(pname(o.slot))}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${S.picks[o.slot].map((id,k)=>`<div class="sc ${CAPTAIN&&(S.capt[o.slot]||0)===k?'cap':''}">${CAPTAIN&&(S.capt[o.slot]||0)===k?'<span class="cb">C</span>':''}${shirt(id)}<b class="nm">${esc(PL[id].name)}</b><span class="sub">${PL[id].pos||'–'} · ${esc(TEAMS[PL[id].team].short)}</span></div>`).join('')}</div></div></div>
     ${o.slot===0&&!other?`<div class="invite">
       <b>Send this link to your friend</b>
       <input id="ilink" readonly value="${esc(url)}">
@@ -1454,7 +1461,7 @@ function evShort(e,i){
 let freshT=null;
 function updateLive(before){
   const E=S.eng;if(!document.getElementById('board'))return;
-  cpuPowers();
+  cpuPowers();reactToFeed();
   const tot=totals();
   document.getElementById('mstrip').innerHTML=mstrip();
   document.getElementById('board').innerHTML=duelPanel(true);
@@ -1490,7 +1497,7 @@ function viewResult(){
     let why;if(!g.startKeys&&!g.endKeys){why=E.why(g.id);if(adj)why.push(`power-ups ${sign(adj)}`)}else why=[];
     if(g.how==='sub')why.unshift(`came on ${g.fromLbl}`);if(g.how==='swap')why.unshift(`swapped in at ${g.fromLbl}`);
     if(g.endHow==='sub')why.push(`subbed off ${g.to}`);if(g.endHow==='swap')why.push(`swapped out at ${g.to}`);
-    return `<div class="brow"><span>${(S.capt[i]||0)===g.k?'Ⓒ ':''}${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${g.pts+adj}</b><span class="why">${why.length?esc(why.join(' · ')):'No scoring events'}</span></div>`}).join('')
+    return `<div class="brow"><span>${CAPTAIN&&(S.capt[i]||0)===g.k?'Ⓒ ':''}${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${g.pts+adj}</b><span class="why">${why.length?esc(why.join(' · ')):'No scoring events'}</span></div>`}).join('')
     +(sc[i].cap?`<div class="brow pwr"><span>Ⓒ Captain bonus (×1.5)</span><b class="num">${sign(sc[i].cap)}</b><span class="why">Half of the captain's points added on top</span></div>`:'')
     +S.powers.map((p,k)=>p.owner!==i?'':`<div class="brow pwr"><span>${POWER[p.type].icon} ${POWER[p.type].label}${p.target?' on '+esc(PL[p.target].name):''}</span><b class="num">${a.per[k]?sign(a.per[k]):'0'}</b><span class="why">Used at ${p.from}′ for ${POWER[p.type].dur} min${p.type==='neg'?(blockedNegs().has(p)?', blocked by a Shield':`, changed ${pname(1-i)==='You'?'your':esc(pname(1-i))+'\'s'} score`):''}</span></div>`).join('');
   app.innerHTML=`<section class="screen">
@@ -1520,6 +1527,53 @@ function viewResult(){
   };
 }
 
+// ================= Extra tabs: Friends, Ranking, Rules =================
+function viewRules(){
+  app.innerHTML=`<section class="screen"><div><div class="eyebrow">Rules</div><h2 style="font-size:2.4rem;text-transform:uppercase">How to play</h2></div>
+    <div class="steps"><div><b>1</b><span>Pick a real match and choose 2 players. Your friend picks theirs.</span></div><div><b>2</b><span>Follow the match live. Every pass, shot, tackle and goal scores points.</span></div><div><b>3</b><span>Use power-ups and your swap at the right moment. Highest score wins.</span></div></div>
+    <div class="rules">
+      <h3>How points work</h3>
+      <div class="ptable">
+        <span>Goal</span><span class="pos">+40</span>
+        <span>Assist</span><span class="pos">+25</span>
+        <span>Penalty saved (goalkeeper)</span><span class="pos">+20</span>
+        <span>Penalty won</span><span class="pos">+10</span>
+        <span>Shot on target</span><span class="pos">+6</span>
+        <span>Goalkeeper save</span><span class="pos">+6</span>
+        <span>Key pass (a pass that leads to a shot)</span><span class="pos">+5</span>
+        <span>Successful dribble</span><span class="pos">+4</span>
+        <span>Tackle</span><span class="pos">+4</span>
+        <span>Interception</span><span class="pos">+4</span>
+        <span>Shot off target</span><span class="pos">+2</span>
+        <span>Duel won</span><span class="pos">+2</span>
+        <span>Foul won</span><span class="pos">+2</span>
+        <span>Completed pass</span><span class="pos">+1</span>
+        <span>Missed pass</span><span class="neg">−1</span>
+        <span>Foul committed</span><span class="neg">−3</span>
+        <span>Yellow card</span><span class="neg">−10</span>
+        <span>Penalty missed</span><span class="neg">−15</span>
+        <span>Red card (second yellow: −25 in total)</span><span class="neg">−25</span>
+      </div>
+      <h3 style="margin-top:14px">Power-ups</h3>
+      <div class="ptable">
+        <span>⚡ Double Points: everything your chosen player earns counts double</span><span>10 min</span>
+        <span>☠ Negative Points: everything one of your rival's players earns counts as minus</span><span>5 min</span>
+        <span>🛡 Shield: blocks the next Negative Points your rival uses on you</span><span>15 min</span>
+      </div>
+      <p class="small muted" style="margin:10px 0 0">Each of you gets one of each per match, plus one ⇄ Swap: take one of your players out and bring in anyone on the pitch. Points already earned stay. If your player is subbed off, the player coming on takes his place automatically. Use them while the ball is in play. Timing is in match minutes.</p>
+      <p class="small muted" style="margin:10px 0 0">Both of you can pick the same player. Pick before kickoff. Practice matches score goals, assists and cards only. Finished real matches are replayed minute by minute.</p>
+    </div>
+  </section>`;
+}
+function viewFriends(){
+  app.innerHTML=`<section class="screen"><div><div class="eyebrow">Friends</div><h2 style="font-size:2.4rem;text-transform:uppercase">Your league</h2></div><div id="league">${leagueHtml('friends')}</div></section>`;
+  bindLeague();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
+}
+function viewRanking(){
+  app.innerHTML=`<section class="screen"><div><div class="eyebrow">Ranking</div><h2 style="font-size:2.4rem;text-transform:uppercase">Top players</h2></div><div id="league">${leagueHtml('top')}</div></section>`;
+  bindLeague();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
+}
+
 // ================= Friends and rankings (online duels only) =================
 async function leagueFetch(opts){
   let r,b;try{r=await fetch('/api/league'+(opts.get?'?'+new URLSearchParams(opts.get):''),opts.body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(opts.body)}:{});b=await r.json()}
@@ -1536,23 +1590,26 @@ async function loadLeague(){
   try{S.league=await leagueFetch({get:{id:me.id,token:me.token}});S.leagueAt=Date.now();S.leagueErr=null}
   catch(e){S.leagueErr=e.message;if(/not found/i.test(e.message)){store.del('fld.me');S.league=null}}
   S.leagueLoading=false;
-  if(S.view==='profile'){const el=document.getElementById('league');if(el){el.innerHTML=leagueHtml();bindLeague()}}
+  const part={profile:'card',friends:'friends',ranking:'top'}[S.view];
+  if(part){const el=document.getElementById('league');if(el){el.innerHTML=leagueHtml(part);bindLeague()}}
 }
-function leagueHtml(){
+function leagueHtml(part){
   const me=store.get('fld.me',null),L=S.league;
   if(!me)return `<div class="lg"><h3>🏆 Friends league</h3><p class="small muted" style="margin:0">Make your player card to add friends, see win streaks and climb the rankings. Only online duels count, so every win is against a real friend.</p>
     <div class="addf"><input id="lgname" maxlength="14" placeholder="Your player name" value="${esc(S.names[0]&&S.names[0]!=='You'?S.names[0]:'')}"><button class="btn" id="lgmake" style="padding:10px 14px">Create</button></div></div>`;
   if(!L)return `<div class="lg"><h3>🏆 Friends league</h3>${S.leagueErr?`<p class="small" style="color:var(--red);margin:0">${esc(S.leagueErr)}</p>`:'<div class="spin"></div>'}</div>`;
   const m=L.me,rank=L.friends.slice().sort((a,b)=>b.w-a.w||b.streak-a.streak||b.pts-a.pts);
   const row=(p,n)=>`<div class="lrow ${p.id===m.id?'me':''}"><span class="rk">${n+1}</span><span class="ln"><b>${esc(p.name)}${p.id===m.id?' (you)':''}</b><small>${p.w}W ${p.d}D ${p.l}L${p.streak>1?` · 🔥 ${p.streak} in a row`:''}</small></span><b class="num lw">${p.w}</b>${p.id!==m.id&&rank===L.friends?'':''}</div>`;
-  return `<div class="lg">
-    <div class="pcard"><div><span class="eyebrow">Your player card</span><b>${esc(m.name)}</b><small>Friend code <code>${esc(m.id)}</code></small></div>
-      <div class="pst"><div><b class="num">${m.w}</b><span>Wins</span></div><div><b class="num">${m.streak}</b><span>Streak</span></div><div><b class="num">${m.best}</b><span>Best</span></div></div></div>
+  const card=`<div class="pcard"><div><span class="eyebrow">Your player card</span><b>${esc(m.name)}</b><small>Friend code <code>${esc(m.id)}</code></small></div>
+      <div class="pst"><div><b class="num">${m.w}</b><span>Wins</span></div><div><b class="num">${m.streak}</b><span>Streak</span></div><div><b class="num">${m.best}</b><span>Best</span></div></div></div>`;
+  if(part==='card')return card;
+  const top=L.top&&L.top.length?`<div class="ltable">${L.top.slice(0,20).map(row).join('')}</div>${L.top.some(p=>p.id===m.id)?'':`<p class="small muted" style="margin:0">You: ${m.w} wins. Win online duels to enter the top 20.</p>`}`:'<div class="empty">No ranked players yet. Win an online duel to be first.</div>';
+  if(part==='top')return `<div class="lg">${top}</div>`;
+  return `<div class="lg">${card}
     <div class="addf"><input id="lgcode" maxlength="8" placeholder="Friend code" autocapitalize="off"><button class="btn ghost" id="lgadd" style="padding:10px 14px">Add</button><button class="btn" id="lginv" style="padding:10px 14px">Invite</button></div>
     <p class="small muted" style="margin:0">Friends you duel online are added automatically.</p>
     <h3 style="margin-top:6px">Friends ranking</h3>
     <div class="ltable">${rank.length>1?rank.map(row).join(''):`${row(m,0)}<div class="empty" style="padding:12px">Add a friend or play an online duel to start your league.</div>`}</div>
-    ${L.top&&L.top.length?`<h3 style="margin-top:6px">Top players</h3><div class="ltable">${L.top.slice(0,10).map(row).join('')}</div>`:''}
   </div>`;
 }
 function bindLeague(){
@@ -1573,7 +1630,53 @@ async function openFriendLink(code){
   let me=store.get('fld.me',null);
   if(!me)me=await ensureProfile(S.names[0]&&S.names[0]!=='You'?S.names[0]:'Player');
   if(me&&me.id!==code){try{await leagueFetch({body:{action:'addfriend',id:me.id,token:me.token,code}});toast('Friend added to your league')}catch(e){toast(e.message)}}
-  S.league=null;go('profile');
+  S.league=null;go('friends');
+}
+
+// ================= App feel: splash, onboarding, haptics, sound =================
+function buzz(ms){try{if(store.get('fld.vib',true)&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
+let actx=null;
+function goalSound(){
+  if(!store.get('fld.sound',true))return;
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t=actx.currentTime;
+    // Short stadium-horn style chime: three rising notes plus a soft crowd noise burst
+    [523.25,659.25,783.99].forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.09);g.gain.linearRampToValueAtTime(.18,t+i*.09+.02);g.gain.exponentialRampToValueAtTime(.001,t+i*.09+.5);o.connect(g).connect(actx.destination);o.start(t+i*.09);o.stop(t+i*.09+.55)});
+    const n=actx.createBufferSource(),buf=actx.createBuffer(1,actx.sampleRate*1.2,actx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.min(1,i/4000)*(1-i/d.length);
+    const bp=actx.createBiquadFilter(),g2=actx.createGain();bp.type='bandpass';bp.frequency.value=900;g2.gain.value=.08;n.buffer=buf;n.connect(bp).connect(g2).connect(actx.destination);n.start(t+.05);
+  }catch(e){}
+}
+// Goal / power-up reactions while watching: compare with what was already shown
+function reactToFeed(){
+  const E=S.eng;if(!E||!E.shown)return;
+  const seen=S.reactSeen||(S.reactSeen=new Set());const first=!S.reactInit;S.reactInit=true;
+  const me=S.mode==='online'&&S.online?S.online.slot:0;
+  [...E.shown(),...S.pwFeed].forEach(e=>{const k=evKey(e)+'|'+(e.ptype||'')+(e.owner??'');if(seen.has(k))return;seen.add(k);if(first)return;
+    if(e.type==='goal'){const v=sideEvPts(me,e),o=sideEvPts(1-me,e);goalSound();buzz(v>0?[80,60,160]:o>0?[40]:[30]);if(v>0)burst('⚽','+'+v)}
+    else if(e.type==='power'&&e.owner!==me){buzz([60,40,60]);toast(`${POWER[e.ptype].icon} ${pname(e.owner)} used ${POWER[e.ptype].label}`)}});
+}
+function hideSplash(){const sp=document.getElementById('splash');if(!sp||sp.classList.contains('out'))return;sp.classList.add('out');setTimeout(()=>sp.remove(),600)}
+const OB=[
+  {i:'⚽',h:'One match. Two players each.',p:'Pick a real football match and choose 2 players. Your friend does the same, on their own phone.'},
+  {i:'📈',h:'Every touch counts.',p:'Passes, shots, tackles, goals and assists score live points. Cards and fouls cost you.'},
+  {i:'⚡',h:'Play your power-ups.',p:'Double your player, flip your rival\'s points, shield yourself, or swap a player who\'s having a bad day.'}];
+function viewOnboard(){
+  const k=S.obStep||0,last=k>=OB.length;
+  app.innerHTML=`<section class="screen onboard">
+    ${last?`<div class="ob-card"><div class="ob-i">👋</div><h2>Pick your player name</h2><p>It's how friends find you and how you show up in the rankings.</p>
+      <input id="obname" maxlength="14" placeholder="e.g. Lukas" value="${esc(S.names[0]&&S.names[0]!=='You'?S.names[0]:'')}" autocomplete="nickname"></div>`
+    :`<div class="ob-track" id="obtrack">${OB.map(c=>`<div class="ob-card"><div class="ob-i">${c.i}</div><h2>${c.h}</h2><p>${c.p}</p></div>`).join('')}</div>`}
+    <div class="ob-dots">${[...OB,0].map((_,n)=>`<i class="${n===k?'on':''}"></i>`).join('')}</div>
+  </section>
+  <div class="actionbar"><div>${last?'':'<button class="btn ghost" id="obskip">Skip</button>'}<button class="btn" id="obnext">${last?"Let's play":'Next'}</button></div></div>`;
+  const tr=document.getElementById('obtrack');
+  if(tr){tr.scrollLeft=k*tr.clientWidth;tr.onscroll=()=>{const n=Math.round(tr.scrollLeft/tr.clientWidth);if(n!==S.obStep){S.obStep=n;app.querySelectorAll('.ob-dots i').forEach((d,j)=>d.className=j===n?'on':'')}}}
+  const sk=document.getElementById('obskip');if(sk)sk.onclick=()=>{S.obStep=OB.length;viewOnboard()};
+  document.getElementById('obnext').onclick=async ev=>{
+    if(!last){S.obStep=(S.obStep||0)+1;if(S.obStep<OB.length&&tr){tr.scrollTo({left:S.obStep*tr.clientWidth,behavior:'smooth'});app.querySelectorAll('.ob-dots i').forEach((d,j)=>d.className=j===S.obStep?'on':'')}else viewOnboard();return}
+    const n=document.getElementById('obname').value.trim();if(!n){toast('Pick a name first');return}
+    ev.target.disabled=true;ev.target.textContent='Setting up…';
+    S.names[0]=n;const nm=store.get('fld.names',['You','Friend']);nm[0]=n;store.set('fld.names',nm);
+    await ensureProfile(n);store.set('fld.onboarded',1);buzz(20);go('home')};
 }
 
 // ================= Share card (1080×1920 story image) =================
@@ -1643,21 +1746,29 @@ function viewProfile(){
   app.innerHTML=`<section class="screen">
     <div><div class="eyebrow">Profile</div><h2 style="font-size:2.4rem;text-transform:uppercase">${esc(S.names[0]||'You')}</h2></div>
     <div class="record"><div><b class="num" style="color:var(--accent)">${c.W}</b><span>Won</span></div><div><b class="num">${c.D}</b><span>Drawn</span></div><div><b class="num" style="color:var(--red)">${c.L}</b><span>Lost</span></div></div>
-    <div id="league">${leagueHtml()}</div>
+    <div id="league">${leagueHtml('card')}</div>
+    <div class="lg"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="snd" ${store.get('fld.sound',true)?'checked':''}> Goal sound</label><label class="toggle"><input type="checkbox" id="vib" ${store.get('fld.vib',true)?'checked':''}> Vibrate on goals and power-ups</label><button class="linkbtn" id="rename" style="text-align:left;padding:0">Change your player name</button></div>
     <div class="section-title"><h2 style="font-size:1.2rem">Recent duels</h2><span class="small muted">Saved on this phone</span></div>
     <div class="hist">${h.length?h.map(x=>{const tm=x.teams||['',''];return `<div class="hrow"><span class="res ${x.out}">${x.out}</span>
       <div style="min-width:0"><b style="font-weight:600">vs ${esc(x.names[1])}</b><div class="small muted">${esc(tm[0])} ${x.score[0]}–${x.score[1]} ${esc(tm[1])} · ${x.real?'Real match':'Practice'} · ${new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</div></div>
       <b class="num" style="font-family:var(--display);font-size:1.3rem">${x.tot[0]}–${x.tot[1]}</b></div>`}).join('')
-      :`<div class="empty">No duels yet. Pick a match on the Matches tab to play your first one.</div>`}</div>
+      :`<div class="empty">No duels yet. Pick a match on the Play tab to play your first one.</div>`}</div>
     ${h.length?'<button class="linkbtn" id="clear">Clear history</button>':''}
   </section>`;
   bindLeague();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
+  document.getElementById('snd').onchange=e=>store.set('fld.sound',e.target.checked);
+  document.getElementById('vib').onchange=e=>store.set('fld.vib',e.target.checked);
+  document.getElementById('rename').onclick=async()=>{const me=store.get('fld.me',null);const n=(prompt('Your player name',S.names[0])||'').trim().slice(0,14);if(!n)return;
+    S.names[0]=n;const nm=store.get('fld.names',['You','Friend']);nm[0]=n;store.set('fld.names',nm);
+    if(me){try{await leagueFetch({body:{action:'rename',id:me.id,token:me.token,name:n}});S.league=null}catch(e){toast(e.message)}}viewProfile()};
   const cl=document.getElementById('clear');
   if(cl)cl.onclick=()=>{if(cl.dataset.sure){S.history=[];store.set('fld.history',[]);render()}else{cl.dataset.sure=1;cl.textContent='Tap again to clear all duels'}};
 }
 
 const hm=location.hash.match(/^#duel-([a-z0-9]{8})$/),hf=location.hash.match(/^#friend-([a-z0-9]{8})$/);
-if(hm)openOnline(hm[1]);else if(hf)openFriendLink(hf[1]);else render();
+if(hm)openOnline(hm[1]);else if(hf)openFriendLink(hf[1]);else if(!store.get('fld.onboarded',0)&&!store.get('fld.history',[]).length){S.view='onboard';S.obStep=0;render()}else render();
+setTimeout(hideSplash,900);
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('/sw.js').catch(()=>{});
 })();
 
 </script>
