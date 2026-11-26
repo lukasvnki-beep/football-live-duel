@@ -461,7 +461,7 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.fx{display:none}}
 </style>
 
-<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg,#08111e);z-index:40;pointer-events:none}[hidden]{display:none!important}</style>
 </head><body>
 <div class="app" id="app"></div>
 <nav class="tabbar" id="tabbar" aria-label="Main">
@@ -554,6 +554,8 @@ async function api(path,params={}){
   if(body&&typeof body.requestsLeftToday==='number'){S.left=body.requestsLeftToday}
   if(body&&body.preview)S.preview=true;
   const errs=body&&body.errors;const msgs=errs?(Array.isArray(errs)?errs:Object.values(errs)):[];
+  if(body&&body.unavailable){S.apiDown=true;const e=new Error('Live football data is unavailable right now. Practice matches still work.');e.down=true;throw e}
+  S.apiDown=false;
   if(msgs.length)throw new Error(msgs.map(String).join(' '));
   if(!r.ok)throw new Error('The football data service answered with an error ('+r.status+').');
   return body.response||[];
@@ -651,6 +653,7 @@ function viewHome(){
   if(!S.fxLoading&&(S.fxDay!==day||(!S.fixtures&&!S.fxErr)))loadFixtures();
   let top='',more='';
   if(S.fxLoading){top='<div class="fixtures">'+[0,1,2].map(()=>'<div class="skel" style="height:150px"></div>').join('')+'</div>'}
+  else if(S.fxErr&&S.apiDown){top=`<div class="note"><b>⏸ Real matches are taking a short break.</b><br>Our live football data isn't available right now. Practice matches below still work, so you can play a duel anyway.<br><button class="linkbtn" id="retry" style="padding:6px 0">Try again</button></div>`}
   else if(S.fxErr){top=`<div class="note err"><b>Couldn't load matches.</b> ${esc(S.fxErr)}<br><button class="linkbtn" id="retry" style="padding:6px 0">Try again</button></div>`}
   else if(S.fixtures){
     const ranked=S.fixtures.map(f=>[f,matchScore(f)]).sort((x,y)=>y[1]-x[1]||(x[0].kickoff<y[0].kickoff?-1:1));
