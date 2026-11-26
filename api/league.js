@@ -31,7 +31,7 @@ async function auth(id, token) {
   if (!okId(id) || !token) return null;
   const [v] = await redis([['GET', 'pl:' + id]]);
   if (!v) return null; const p = JSON.parse(v);
-  return p.tok === hashTok(token) ? p : null;
+  return (p.tok === hashTok(token) || (p.toks || []).includes(hashTok(token))) ? p : null;
 }
 
 export default async function handler(req, res) {
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       const [fr, top] = await redis([['SMEMBERS', 'fr:' + id], ['ZREVRANGE', 'lb:wins', '0', '19']]);
       const friends = await getMany([id, ...(fr || []).slice(0, 100)]);
       const topList = await getMany(top || []);
-      return res.status(200).json({ me: pub(id, me), friends, top: topList });
+      return res.status(200).json({ me: pub(id, me), friends, top: topList, email: me.email || '', google: !!me.google, data: me.data || null });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
     const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
@@ -63,6 +63,7 @@ export default async function handler(req, res) {
     if (!me) return res.status(403).json({ error: 'Profile not found.' });
     if (b.action === 'rename') {
       me.name = clean(b.name, 14) || me.name;
+      if (me.data) me.data.name = me.name;
       await redis([['SET', 'pl:' + b.id, JSON.stringify(me)]]);
       return res.status(200).json({ me: pub(b.id, me) });
     }
