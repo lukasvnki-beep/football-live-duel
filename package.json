@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "ios": "cap sync ios && cap open ios",
@@ -12,7 +12,8 @@
   "dependencies": {
     "@capacitor/core": "8.6.3",
     "@capacitor/ios": "8.6.3",
-    "@capacitor/android": "8.6.3"
+    "@capacitor/android": "8.6.3",
+    "nodemailer": "10.3.1"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.3"

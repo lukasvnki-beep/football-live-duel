@@ -65,7 +65,8 @@ function view(d, slot) {
 async function profileId(pid, ptok) {
   if (!/^[a-z0-9]{8}$/.test(String(pid || '')) || !ptok) return null;
   const [v] = await redis([['GET', 'pl:' + pid]]);
-  return v && JSON.parse(v).tok === hashTok(ptok) ? pid : null;
+  if (!v) return null; const p = JSON.parse(v);
+  return (p.tok === hashTok(ptok) || (p.toks || []).includes(hashTok(ptok))) ? pid : null;
 }
 
 function slotOf(d, token) {

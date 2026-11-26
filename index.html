@@ -1693,7 +1693,7 @@ function finishDuel(){
   const a=powerAdjust(),pwGain=S.powers.reduce((x,p,k)=>x+(p.owner===me?(a.per[k]||0)*(p.type==='neg'?-1:1):0),0);
   S.history.unshift({at:Date.now(),names:[pname(me),pname(1-me)],tot:[tot[me],tot[1-me]],score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real',online:S.mode==='online',
     comeback:!!(S.htTot&&S.htTot[me]<S.htTot[1-me]&&out==='W'),pwGain,swap:swapUsed(me)});
-  S.history=S.history.slice(0,30);store.set('fld.history',S.history);
+  S.history=S.history.slice(0,30);store.set('fld.history',S.history);syncAccount();
   if(f.kind==='real')store.del('fld.active');
   go('result');
 }
@@ -1903,8 +1903,10 @@ async function ensureProfile(name){
 async function loadLeague(){
   const me=store.get('fld.me',null);if(!me){S.league=null;return}
   S.leagueLoading=true;
-  try{S.league=await leagueFetch({get:{id:me.id,token:me.token}});S.leagueAt=Date.now();S.leagueErr=null}
-  catch(e){S.leagueErr=e.message;if(/not found/i.test(e.message)){store.del('fld.me');S.league=null}}
+  try{S.league=await leagueFetch({get:{id:me.id,token:me.token}});S.leagueAt=Date.now();S.leagueErr=null
+    if(S.league.email||S.league.google){store.set('fld.acct',{email:S.league.email,google:S.league.google});const sv=(S.league.data&&S.league.data.history)||[],m=mergeHist(sv,S.history);
+      if(m.length!==S.history.length){S.history=m;store.set('fld.history',m)}if(m.length!==sv.length)syncAccount()}}
+  catch(e){S.leagueErr=e.message;if(/not found/i.test(e.message)){store.del('fld.me');store.del('fld.acct');S.league=null;S.leagueErr=null;rerenderAccount()}}
   S.leagueLoading=false;
   const part={profile:'card',friends:'friends',ranking:'top'}[S.view];
   if(part){const el=document.getElementById('league');if(el){el.innerHTML=leagueHtml(part);bindLeague()}}
@@ -1913,7 +1915,7 @@ async function loadLeague(){
 function leagueHtml(part){
   const me=store.get('fld.me',null),L=S.league;
   if(!me)return `<div class="lg"><h3>🏆 Friends league</h3><p class="small muted" style="margin:0">Make your player card to add friends, see win streaks and climb the rankings. Only online duels count, so every win is against a real friend.</p>
-    <div class="addf"><input id="lgname" maxlength="14" placeholder="Your player name" value="${esc(S.names[0]&&S.names[0]!=='You'?S.names[0]:'')}"><button class="btn" id="lgmake" style="padding:10px 14px">Create</button></div></div>`;
+    <div class="addf"><input id="lgname" maxlength="14" placeholder="Your player name" value="${esc(S.names[0]&&S.names[0]!=='You'?S.names[0]:'')}"><button class="btn" id="lgmake" style="padding:10px 14px">Create</button></div><button class="linkbtn" id="lgsignin" style="text-align:left;padding:0">Already have an account? Sign in on the Profile tab</button></div>`;
   if(!L)return `<div class="lg"><h3>🏆 Friends league</h3>${S.leagueErr?`<p class="small" style="color:var(--red);margin:0">${esc(S.leagueErr)}</p>`:'<div class="spin"></div>'}</div>`;
   const m=L.me,rank=L.friends.slice().sort((a,b)=>b.w-a.w||b.streak-a.streak||b.pts-a.pts);
   const row=(p,n)=>`<div class="lrow ${p.id===m.id?'me':''}"><span class="rk">${n+1}</span><span class="ln"><b>${esc(p.name)}${p.id===m.id?' (you)':''}</b><small>${p.w}W ${p.d}D ${p.l}L${p.streak>1?` · 🔥 ${p.streak} in a row`:''}</small></span><b class="num lw">${p.w}</b>${p.id!==m.id&&rank===L.friends?'':''}</div>`;
@@ -1930,6 +1932,7 @@ function leagueHtml(part){
   </div>`;
 }
 function bindLeague(){
+  const si=document.getElementById('lgsignin');if(si)si.onclick=()=>{if(S.view==='profile'){const a=document.getElementById('acmail');if(a)a.focus()}else go('profile')};
   const mk=document.getElementById('lgmake');
   if(mk)mk.onclick=async()=>{const n=document.getElementById('lgname').value.trim();if(!n){toast('Pick a name first');return}mk.disabled=true;
     const nm=store.get('fld.names',['You','Friend']);nm[0]=n;store.set('fld.names',nm);S.names[0]=n;
@@ -2075,29 +2078,90 @@ function badgesHtml(){const L=S.league,me=L&&L.me,fr=L&&L.friends?L.friends.filt
   const got=BADGES.map(b=>!!b.ok(h,me,fr)),n=got.filter(Boolean).length;
   return `<div class="section-title"><h2 style="font-size:1.2rem">Badges</h2><span class="small muted">${n}/${BADGES.length} unlocked</span></div>
     <div class="badges">${BADGES.map((b,k)=>`<div class="badge ${got[k]?'on':'off'}"><span class="bi">${b.i}</span><b>${b.n}</b><small>${b.d}</small></div>`).join('')}</div>`}
+// ================= Accounts: email code or Google, same profile on every phone =================
+async function accFetch(body){
+  let r,b;try{r=await fetch('/api/account',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});b=await r.json()}
+  catch(e){throw new Error('No connection. Check your internet and try again.')}
+  if(!r.ok||b.error)throw new Error(b.error||'Something went wrong.');return b;
+}
+const localData=()=>({name:S.names[0]&&S.names[0]!=='You'?S.names[0]:'',history:S.history});
+function mergeHist(a,b){const seen=new Set(),out=[];[...(a||[]),...(b||[])].sort((x,y)=>(y.at||0)-(x.at||0)).forEach(x=>{if(x&&x.at&&!seen.has(x.at)){seen.add(x.at);out.push(x)}});return out.slice(0,30)}
+function applyAccount(b){
+  store.set('fld.me',{id:b.id,token:b.token});store.set('fld.acct',{email:b.email||'',google:!!b.google});
+  if(b.data){S.history=mergeHist(b.data.history,[]);store.set('fld.history',S.history)}
+  const nm=store.get('fld.names',['You','Friend']);nm[0]=(b.me&&b.me.name)||nm[0];store.set('fld.names',nm);S.names[0]=nm[0];
+  store.set('fld.onboarded',1);S.acct={};S.league=null;
+}
+// Called after each duel and when this phone has duels the account does not have yet
+function syncAccount(){const me=store.get('fld.me',null);if(!me||!store.get('fld.acct',null))return;accFetch({action:'sync',id:me.id,token:me.token,data:localData()}).catch(()=>{})}
+function accountHtml(){
+  const acc=store.get('fld.acct',null),A=S.acct||(S.acct={});
+  if(acc)return `<div class="lg" id="acct"><h3>Account</h3><p class="small" style="margin:0">Signed in${acc.email?` as <b>${esc(acc.email)}</b>`:' with Google'}. Your stats, friends and badges are saved on every phone where you sign in.</p>
+    <div class="addf"><button class="btn ghost" id="acout" style="padding:10px 14px">Sign out</button></div>
+    <button class="linkbtn" id="acdel" style="color:var(--red)">${A.sure?'Tap again to delete your account for good':'Delete my account'}</button></div>`;
+  const cfg=S.acctCfg;
+  return `<div class="lg" id="acct"><h3>Save your profile</h3><p class="small muted" style="margin:0">Sign in to keep your stats, friends and badges, and play on any phone. Your duels on this phone come with you.</p>
+    ${A.step==='code'?`<p class="small" style="margin:0">We sent a 6-digit code to <b>${esc(A.email)}</b>.${A.dev?` Preview test code: <b>${esc(A.dev)}</b>`:''}</p>
+      <div class="addf"><input id="accode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"><button class="btn" id="acok" style="padding:10px 14px">Sign in</button></div>
+      <button class="linkbtn" id="acback" style="text-align:left;padding:0">Use another email</button>`
+    :`<div class="addf"><input id="acmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" placeholder="Your email" value="${esc(A.email||'')}"><button class="btn" id="acsend" style="padding:10px 14px">Get code</button></div>`}
+    ${cfg&&cfg.google&&A.step!=='code'?'<div id="gbtn" style="min-height:44px;display:flex;justify-content:center"></div>':''}
+    <p class="small muted" style="margin:0">By signing in you accept the <a href="/privacy.html" style="color:inherit">privacy policy</a>.</p></div>`;
+}
+function rerenderAccount(){const el=document.getElementById('acct');if(!el)return;el.outerHTML=accountHtml();bindAccount()}
+async function finishSignIn(p){
+  const me=store.get('fld.me',null);
+  const b=await accFetch({...p,id:me&&me.id,token:me&&me.token,data:localData()});
+  applyAccount(b);toast(b.merged?'Signed in. Your stats were added to your account':'Signed in');render();
+}
+function bindAccount(){
+  const A=S.acct||(S.acct={}),$=id=>document.getElementById(id);
+  if(!S.acctCfg&&!store.get('fld.acct',null))accFetch().then(c=>{S.acctCfg=c;if(c.google)rerenderAccount()}).catch(()=>{});
+  if($('acsend'))$('acsend').onclick=async()=>{const e=$('acmail').value.trim();if(!e){toast('Enter your email');return}$('acsend').disabled=true;
+    try{const b=await accFetch({action:'sendcode',email:e});S.acct={step:'code',email:e,dev:b.devCode||''};rerenderAccount();setTimeout(()=>$('accode')&&$('accode').focus(),50)}catch(x){toast(x.message);$('acsend').disabled=false}};
+  if($('acok'))$('acok').onclick=async()=>{const c=$('accode').value.trim();if(c.length!==6){toast('Enter the 6-digit code');return}$('acok').disabled=true;
+    try{await finishSignIn({action:'verify',email:A.email,code:c})}catch(x){toast(x.message);$('acok').disabled=false}};
+  if($('accode'))$('accode').oninput=e=>{if(e.target.value.replace(/\D/g,'').length===6)$('acok').click()};
+  if($('acback'))$('acback').onclick=()=>{S.acct={email:A.email};rerenderAccount()};
+  if($('gbtn'))loadGoogle().then(g=>{if(!g||!$('gbtn'))return;
+    g.accounts.id.initialize({client_id:S.acctCfg.google,callback:async r=>{try{await finishSignIn({action:'google',credential:r.credential})}catch(x){toast(x.message)}}});
+    g.accounts.id.renderButton($('gbtn'),{theme:'filled_black',size:'large',shape:'pill',text:'continue_with',width:280})});
+  if($('acout'))$('acout').onclick=async()=>{const me=store.get('fld.me',null);if(me)accFetch({action:'signout',id:me.id,token:me.token}).catch(()=>{});
+    ['fld.me','fld.acct','fld.history','fld.online','fld.active'].forEach(k=>store.del(k));store.set('fld.names',['You','Friend']);S.names=['You','Friend'];S.history=[];S.league=null;S.acct={};toast('Signed out');render()};
+  if($('acdel'))$('acdel').onclick=async()=>{if(!A.sure){A.sure=1;rerenderAccount();return}
+    const me=store.get('fld.me',null);$('acdel').disabled=true;
+    try{if(me)await accFetch({action:'delete',id:me.id,token:me.token});
+      try{Object.keys(localStorage).filter(k=>k.startsWith('fld.')).forEach(k=>localStorage.removeItem(k))}catch(e){}
+      S.names=['You','Friend'];S.history=[];S.league=null;S.acct={};toast('Your account and data are deleted');S.view='onboard';S.obStep=0;render()}
+    catch(x){toast(x.message);A.sure=0;rerenderAccount()}};
+}
+let gsiP=null;
+function loadGoogle(){return gsiP||(gsiP=new Promise(ok=>{if(window.google&&google.accounts)return ok(google);const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>ok(window.google);s.onerror=()=>{gsiP=null;ok(null)};document.head.appendChild(s)}))}
 function viewProfile(){
   const h=S.history;const c={W:0,D:0,L:0};h.forEach(x=>c[x.out]++);
   app.innerHTML=`<section class="screen">
     <div><div class="eyebrow">Profile</div><h2 style="font-size:2.4rem;text-transform:uppercase">${esc(S.names[0]||'You')}</h2></div>
     <div class="record"><div><b class="num" style="color:var(--accent)">${c.W}</b><span>Won</span></div><div><b class="num">${c.D}</b><span>Drawn</span></div><div><b class="num" style="color:var(--red)">${c.L}</b><span>Lost</span></div></div>
     <div id="league">${leagueHtml('card')}</div>
+    ${accountHtml()}
     <div id="badges">${badgesHtml()}</div>
     <div class="lg"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="snd" ${store.get('fld.sound',true)?'checked':''}> Goal sound</label><label class="toggle"><input type="checkbox" id="vib" ${store.get('fld.vib',true)?'checked':''}> Vibrate on goals and power-ups</label><button class="linkbtn" id="rename" style="text-align:left;padding:0">Change your player name</button></div>
-    <div class="section-title"><h2 style="font-size:1.2rem">Recent duels</h2><span class="small muted">Saved on this phone</span></div>
+    <div class="section-title"><h2 style="font-size:1.2rem">Recent duels</h2><span class="small muted">${store.get('fld.acct',null)?'Saved in your account':'Saved on this phone'}</span></div>
     <div class="hist">${h.length?h.map(x=>{const tm=x.teams||['',''];return `<div class="hrow"><span class="res ${x.out}">${x.out}</span>
       <div style="min-width:0"><b style="font-weight:600">vs ${esc(x.names[1])}</b><div class="small muted">${esc(tm[0])} ${x.score[0]}–${x.score[1]} ${esc(tm[1])} · ${x.real?'Real match':'Practice'} · ${new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</div></div>
       <b class="num" style="font-family:var(--display);font-size:1.3rem">${x.tot[0]}–${x.tot[1]}</b></div>`}).join('')
       :`<div class="empty">No duels yet. Pick a match on the Play tab to play your first one.</div>`}</div>
     ${h.length?'<button class="linkbtn" id="clear">Clear history</button>':''}
+    <a class="linkbtn" href="/privacy.html">Privacy policy</a>
   </section>`;
-  bindLeague();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
+  bindLeague();bindAccount();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
   document.getElementById('snd').onchange=e=>store.set('fld.sound',e.target.checked);
   document.getElementById('vib').onchange=e=>store.set('fld.vib',e.target.checked);
   document.getElementById('rename').onclick=async()=>{const me=store.get('fld.me',null);const n=(prompt('Your player name',S.names[0])||'').trim().slice(0,14);if(!n)return;
     S.names[0]=n;const nm=store.get('fld.names',['You','Friend']);nm[0]=n;store.set('fld.names',nm);
     if(me){try{await leagueFetch({body:{action:'rename',id:me.id,token:me.token,name:n}});S.league=null}catch(e){toast(e.message)}}viewProfile()};
   const cl=document.getElementById('clear');
-  if(cl)cl.onclick=()=>{if(cl.dataset.sure){S.history=[];store.set('fld.history',[]);render()}else{cl.dataset.sure=1;cl.textContent='Tap again to clear all duels'}};
+  if(cl)cl.onclick=()=>{if(cl.dataset.sure){S.history=[];store.set('fld.history',[]);const me=store.get('fld.me',null);if(me&&store.get('fld.acct',null))accFetch({action:'sync',id:me.id,token:me.token,data:{...localData(),clear:1}}).catch(()=>{});render()}else{cl.dataset.sure=1;cl.textContent='Tap again to clear all duels'}};
 }
 
 const hm=location.hash.match(/^#duel-([a-z0-9]{8})$/),hf=location.hash.match(/^#friend-([a-z0-9]{8})$/);
