@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 
 const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-const GMAIL_USER = process.env.GMAIL_USER, GMAIL_PASS = process.env.GMAIL_APP_PASSWORD;
+const GMAIL_USER = (process.env.GMAIL_USER || '').trim(), GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
 const GOOGLE_ID = process.env.GOOGLE_CLIENT_ID || '';
 const PREVIEW = process.env.VERCEL_ENV !== 'production';
 const MAIL_ON = !!(GMAIL_USER && GMAIL_PASS);
@@ -130,11 +130,20 @@ export default async function handler(req, res) {
       if (!MAIL_ON && !PREVIEW) return res.status(503).json({ error: 'Email sign-in is not set up yet.' });
       if (limited('ip:' + ip, 15)) return res.status(429).json({ error: 'Too many codes asked. Try again in an hour.' });
       const h = sha(email);
-      const [n] = await redis([['INCR', 'rl:em:' + h], ['EXPIRE', 'rl:em:' + h, '3600', 'NX']]);
+      const [, n] = await redis([['SET', 'rl:em:' + h, '0', 'EX', '3600', 'NX'], ['INCR', 'rl:em:' + h]]);
       if (n > 5) return res.status(429).json({ error: 'Too many codes for this email. Try again in an hour.' });
       const code = String(crypto.randomInt(0, 1e6)).padStart(6, '0');
       await redis([['SET', 'code:' + h, JSON.stringify({ c: sha(code + h), n: 0 }), 'EX', '600']]);
-      if (MAIL_ON) { await sendMail(email, code); return res.status(200).json({ ok: true }); }
+      if (MAIL_ON) {
+        try { await sendMail(email, code); }
+        catch (e) {
+          console.error('sendmail failed', e && e.code, e && e.responseCode, e && e.message);
+          await redis([['DEL', 'code:' + h]]);
+          const why = e && e.code === 'EAUTH' ? 'Gmail refused the app password (check GMAIL_USER and GMAIL_APP_PASSWORD in Vercel)' : 'the email could not be sent (' + String((e && (e.code || e.message)) || 'unknown').slice(0, 60) + ')';
+          return res.status(502).json({ error: 'Sign-in email failed: ' + why + '.' });
+        }
+        return res.status(200).json({ ok: true });
+      }
       return res.status(200).json({ ok: true, devCode: code }); // preview without email set up: show the code
     }
 
@@ -189,6 +198,7 @@ export default async function handler(req, res) {
     }
     return res.status(400).json({ error: 'Unknown action.' });
   } catch (e) {
-    return res.status(502).json({ error: 'The server had a problem. Try again in a moment.' });
+    console.error('account error', e && e.message);
+    return res.status(502).json({ error: 'The server had a problem (' + String((e && e.message) || '').slice(0, 60) + '). Try again in a moment.' });
   }
 }
