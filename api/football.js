@@ -37,7 +37,8 @@ let quotaLeft = null;
 function cacheSeconds(path, q) {
   if (path === 'players/squads') return 86400;
   if (path === 'fixtures/lineups') return 300;
-  if (path === 'fixtures' && (q.id || q.live)) return 55;
+  // Live match: when the daily quota runs low, keep answers longer so all phones share fewer API calls
+  if (path === 'fixtures' && (q.id || q.live)) return quotaLeft != null && quotaLeft < 120 ? 150 : 55;
   if (path === 'fixtures' && q.date) {
     const today = new Date().toISOString().slice(0, 10);
     return q.date < today ? 86400 : 600;   // past days never change
@@ -105,8 +106,10 @@ export default async function handler(req, res) {
     const body = await r.json();
     const left = r.headers.get('x-ratelimit-requests-remaining');
     if (left != null) { body.requestsLeftToday = Number(left); quotaLeft = Number(left); }
+    const ttl2 = cacheSeconds(path, picked);
+    res.setHeader('Cache-Control', `public, s-maxage=${ttl2}, stale-while-revalidate=${ttl2}`);
     const errs = body && body.errors && (Array.isArray(body.errors) ? body.errors.length : Object.keys(body.errors).length);
-    if (r.ok && !errs) memo.set(cacheKey, { until: Date.now() + ttl * 1000, body });
+    if (r.ok && !errs) memo.set(cacheKey, { until: Date.now() + ttl2 * 1000, body });
     else res.setHeader('Cache-Control', 'no-store');
     return res.status(r.ok ? 200 : r.status).json(body);
   } catch (e) {
