@@ -21,4 +21,4 @@ Live events and player stats come from API-Football. They poll about once a minu
 
 ## Accounts
 
-Players sign in with a 6-digit code sent by email (`api/account.js`). Codes are sent from a Gmail account with an app password, set in Vercel as `GMAIL_USER` and `GMAIL_APP_PASSWORD`. Google sign-in turns on when `GOOGLE_CLIENT_ID` is set. The privacy policy is at `/privacy.html`; "Delete my account" on the Profile tab erases the account for good.
+Players sign in with a 6-digit code sent by email (`api/account.js`). Codes are sent from a Gmail account with an app password, set in Vercel as `GMAIL_USER` and `GMAIL_APP_PASSWORD` (spaces in the app password are ignored). After changing them, redeploy so the new values are used. Google sign-in turns on when `GOOGLE_CLIENT_ID` is set. The privacy policy is at `/privacy.html`; "Delete my account" on the Profile tab erases the account for good.
