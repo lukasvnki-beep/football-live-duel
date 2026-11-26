@@ -4,6 +4,7 @@
 //   duel:<code>:meta     fixture + teams + names
 //   duel:<code>:p0 / p1  that player's picks, proposed forfeit, accepted flag (+ hashed token)
 //   duel:<code>:powers   list of power-ups used, in order
+//   duel:<code>:chat     last chat messages and emoji reactions between the two players
 //   duel:<code>:start    when the duel started on a match already in progress (so earlier points don't count)
 
 import crypto from 'node:crypto';
@@ -29,6 +30,7 @@ const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f<>]/g,
 const okCode = c => /^[a-z0-9]{8}$/.test(String(c || ''));
 
 const creates = new Map();
+const lastSay = new Map();
 function limited(ip) {
   const now = Date.now(); let v = creates.get(ip);
   if (!v || now - v.start > 3600e3) { v = { start: now, count: 0 }; creates.set(ip, v); }
@@ -38,9 +40,9 @@ function limited(ip) {
 
 async function load(code) {
   const k = 'duel:' + code;
-  const [meta, p0, p1, start, powers] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start'], ['LRANGE', k + ':powers', '0', '-1']]).then(([m, pw]) => [...m, pw]);
+  const [meta, p0, p1, start, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
   if (!meta) return null;
-  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null };
+  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, chat: (chat || []).map(x => JSON.parse(x)) };
 }
 
 // What a given player is allowed to see
@@ -53,7 +55,7 @@ function view(d, slot) {
     dare: (both || i === slot) ? p.dare || '' : '',
     dareOk: !!p.dareOk,
   });
-  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null };
+  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, chat: slot >= 0 ? d.chat : [] };
 }
 
 function slotOf(d, token) {
@@ -135,6 +137,15 @@ export default async function handler(req, res) {
       if (!other || !other.dare) return res.status(400).json({ error: 'There is no forfeit to answer.' });
       const upd = b.accept ? { ...other, dareOk: true } : { ...other, dare: '', dareOk: false };
       await redis([['SET', k + ':p' + o, JSON.stringify(upd), 'KEEPTTL']]);
+    } else if (b.action === 'say') {
+      // Chat message or quick emoji reaction, only between the two players of this duel
+      const text = clean(b.text, 200);
+      if (!text) return res.status(400).json({ error: 'Empty message.' });
+      const lk = code + ':' + slot, now = Date.now();
+      if (now - (lastSay.get(lk) || 0) < 300) return res.status(429).json({ error: 'Slow down a little.' });
+      lastSay.set(lk, now); if (lastSay.size > 5000) lastSay.clear();
+      const m = { s: slot, t: text, e: b.emoji ? 1 : 0, at: now, id: crypto.randomBytes(4).toString('hex') };
+      await redis([['RPUSH', k + ':chat', JSON.stringify(m)], ['LTRIM', k + ':chat', '-200', '-1'], ['EXPIRE', k + ':chat', String(TTL)]]);
     } else if (b.action === 'start') {
       // First phone to open the live match records the starting point; the other phone reuses it.
       const other = d.p[1 - slot];

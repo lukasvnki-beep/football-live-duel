@@ -174,6 +174,26 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .brow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.88rem;padding-top:8px;border-top:1px solid var(--line)}
 .brow:first-of-type{border-top:0;padding-top:0}
 .brow .why{grid-column:1/-1;color:var(--muted);font-size:.78rem}
+.chatfab{position:fixed;right:16px;bottom:calc(100px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:1.5rem;z-index:8;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
+.chatfab .dot{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-size:.72rem;font-weight:800;display:grid;place-items:center;padding:0 5px}
+.chatsheet{position:fixed;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;height:min(72vh,560px);background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;z-index:10;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+.chatsheet header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.chatsheet header b{flex:1}
+.chatsheet header button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 12px;font:inherit;font-size:.8rem;cursor:pointer}
+.chatlist{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.msg{max-width:78%;padding:8px 12px;border-radius:16px;background:var(--panel2);align-self:flex-start;word-wrap:break-word;font-size:.95rem}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink)}
+.msg.big{background:none;font-size:2.2rem;padding:0 4px}
+.msg small{display:block;opacity:.65;font-size:.68rem;margin-top:2px}
+.emorow{display:flex;gap:6px;padding:8px 14px;overflow-x:auto;border-top:1px solid var(--line)}
+.emorow button{font-size:1.5rem;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:4px 8px;cursor:pointer;flex:none}
+.chatin{display:flex;gap:8px;padding:8px 14px 12px}
+.chatin input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:999px;color:var(--text);padding:10px 14px;font:inherit;font-size:16px}
+.chatin button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:0 16px;font:inherit;font-weight:700;cursor:pointer}
+.burst{position:fixed;left:50%;top:40%;font-size:5rem;z-index:11;pointer-events:none;animation:burst 1.6s ease-out forwards}
+.burst span{display:block;font-size:.9rem;text-align:center;font-weight:700;background:var(--panel2);border-radius:999px;padding:2px 10px;margin-top:4px}
+@keyframes burst{0%{transform:translate(-50%,0) scale(.4);opacity:0}15%{transform:translate(-50%,-10px) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-120px) scale(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.burst{animation:none;transform:translateX(-50%);opacity:1}}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.88rem;z-index:9}
 
 /* Profile */
@@ -350,7 +370,7 @@ const backBtn=`<button class="back" id="back" aria-label="Back to matches"><svg 
 
 function go(view){S.view=view;if(!['wait','reveal','live','join'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
   if(view==='home'&&S.mode==='online')S.names=store.get('fld.names',['You','Friend']);
-  render();window.scrollTo(0,0)}
+  render();window.scrollTo(0,0);chatUI()}
 function render(){
   tabbar.hidden=!(S.view==='home'||S.view==='profile');
   document.getElementById('tab-home').setAttribute('aria-current',S.view==='home'?'page':'false');
@@ -677,7 +697,7 @@ function viewReveal(){
   app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:true}).then(()=>viewReveal(),e=>toast(e.message));return}S.dareOk[+b.dataset.acc]=true;viewReveal()});
   app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:false}).then(()=>viewReveal(),e=>toast(e.message));return}S.dares[+b.dataset.ref]='';viewReveal()});
   document.getElementById('ko').onclick=()=>{
-    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false,S.online&&S.online.state&&S.online.state.start);go('live');S.eng.start();startSync(15000);return}
+    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false,S.online&&S.online.state&&S.online.state.start);go('live');S.eng.start();startSync(8000);return}
     [0,1].forEach(i=>{if(!S.dareOk[i])S.dares[i]=''});
     S.speed=1;S.paused=false;resetPowers();
     if(f.kind==='sim'){S.eng=simEngine(f);go('live');startTimer()}
@@ -712,7 +732,7 @@ async function onlinePost(body){
   applyOnline(b.state);return b;
 }
 function applyOnline(st){
-  if(!st)return;S.online.state=st;
+  if(!st)return;S.online.state=st;gotChat(st.chat||[]);
   Object.entries(st.teams||{}).forEach(([k,t])=>{if(!TEAMS[k])TEAMS[k]=t});
   S.names=[(st.players[0]&&st.players[0].name)||'Player 1',(st.players[1]&&st.players[1].name)||''];
   st.players.forEach(p=>p&&(p.players||[]).forEach(x=>{if(!PL[x.id])PL[x.id]=x}));
@@ -724,14 +744,16 @@ function applyOnline(st){
 }
 function startSync(ms){
   if(S.syncT)clearInterval(S.syncT);
-  S.syncT=setInterval(async()=>{
-    if(!S.online)return;
-    try{const st=await onlineFetch({get:{code:S.online.code,token:S.online.token}});const was=S.online.state&&S.online.state.both;applyOnline(st);
-      if(S.view==='wait'){if(st.both)go('reveal');else viewWait()}
-      else if(S.view==='reveal')viewReveal();
-      else if(S.view==='live')updateLive();
-    }catch(e){}
-  },ms);
+  S.syncT=setInterval(syncOnce,ms);
+}
+async function syncOnce(){
+  if(!S.online)return;
+  try{const st=await onlineFetch({get:{code:S.online.code,token:S.online.token}});applyOnline(st);
+    if(S.view==='wait'){if(st.both)go('reveal');else viewWait()}
+    else if(S.view==='reveal')viewReveal();
+    else if(S.view==='live')updateLive();
+    chatUI();
+  }catch(e){}
 }
 async function submitOnlinePicks(){
   const f=S.fixture,i=S.turn,btn=document.getElementById('lock');if(btn){btn.disabled=true;btn.textContent='Saving…'}
@@ -742,7 +764,7 @@ async function submitOnlinePicks(){
     }
     store.set('fld.online',{code:S.online.code,token:S.online.token,slot:S.online.slot,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
     await onlinePost({action:'picks',picks:S.picks[i],players:S.picks[i].map(id=>PL[id]),dare:S.dares[i]||''});
-    if(S.online.state.both)go('reveal');else{go('wait');startSync(4000)}
+    if(S.online.state.both){go('reveal');startSync(5000)}else{go('wait');startSync(4000)}
   }catch(e){toast(e.message);if(btn){btn.disabled=false;btn.textContent='Lock in picks'}}
 }
 function viewWait(){
@@ -778,7 +800,7 @@ async function openOnline(code){
       if(!me||!me.ready){S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;go('draft');loadPlayers(S.fixture);return}
       if(!st.both){go('wait');startSync(4000);return}
       const started=LIVE.has(st.fx.status)||Date.now()>Date.parse(st.fx.kickoff);
-      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false,st.start);go('live');S.eng.start();startSync(15000)}else{go('reveal');startSync(5000)}
+      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false,st.start);go('live');S.eng.start();startSync(8000)}else{go('reveal');startSync(5000)}
     }catch(e){toast(e.message);store.del('fld.online');go('home')}
     return;
   }
@@ -818,6 +840,64 @@ function viewJoin(){
       S.joining=true;startDuel(b.state.fx);
     }catch(e){toast(e.message);jg.disabled=false;jg.textContent='Accept the duel'}
   };
+}
+
+// ---- Chat and quick reactions (online duels only) ----
+const EMOJIS=['😂','🔥','💀','😭','👀','🤡','🙌','⚽','😤','🫡'];
+const chatOn=()=>S.mode==='online'&&S.online&&S.online.state&&['wait','reveal','live','result'].includes(S.view);
+const muteKey=()=>'fld.mute.'+(S.online&&S.online.code);
+function gotChat(list){
+  const o=S.online;if(!o)return;
+  const seen=o.chatSeen||0,first=o.chatSeen==null;
+  o.chat=list;const last=list.length?list[list.length-1].at:0;
+  if(first){o.chatSeen=last;o.unread=0;return}
+  const fresh=list.filter(m=>m.at>seen&&m.s!==o.slot);
+  o.chatSeen=Math.max(seen,last);
+  if(!fresh.length||store.get(muteKey(),false))return;
+  if(S.chatOpen)return;
+  o.unread=(o.unread||0)+fresh.length;
+  const m=fresh[fresh.length-1],who=pname(m.s);
+  if(m.e)burst(m.t,who);else toast(`💬 ${who}: ${m.t.slice(0,60)}`);
+}
+function burst(emoji,who){const d=document.createElement('div');d.className='burst';d.textContent=emoji;const l=document.createElement('span');l.textContent=who;d.appendChild(l);document.body.appendChild(d);setTimeout(()=>d.remove(),1700)}
+function chatUI(){
+  let fab=document.getElementById('chatfab');
+  if(!chatOn()){if(fab)fab.remove();closeChat();return}
+  if(!fab){fab=document.createElement('button');fab.id='chatfab';fab.className='chatfab';fab.setAttribute('aria-label','Chat with your friend');fab.onclick=openChat;document.body.appendChild(fab)}
+  const n=S.online.unread||0;fab.innerHTML='💬'+(n?`<span class="dot">${n>9?'9+':n}</span>`:'');
+  if(S.chatOpen)drawChat();
+}
+function openChat(){
+  S.chatOpen=true;S.online.unread=0;
+  let sh=document.getElementById('chatsheet');
+  if(!sh){sh=document.createElement('div');sh.id='chatsheet';sh.className='chatsheet';sh.setAttribute('role','dialog');sh.setAttribute('aria-label','Chat');
+    sh.innerHTML=`<header><b></b><button id="cmute"></button><button id="cclose" aria-label="Close chat">Close</button></header><div class="chatlist" id="clist"></div>
+      <div class="emorow">${EMOJIS.map(e=>`<button data-emo="${e}" aria-label="Send ${e}">${e}</button>`).join('')}</div>
+      <form class="chatin" id="cform"><input id="ctext" maxlength="200" placeholder="Say something…" autocomplete="off"><button>Send</button></form>`;
+    document.body.appendChild(sh);
+    sh.querySelector('#cclose').onclick=closeChat;
+    sh.querySelector('#cmute').onclick=()=>{store.set(muteKey(),!store.get(muteKey(),false));drawChat()};
+    sh.querySelectorAll('[data-emo]').forEach(b=>b.onclick=()=>say(b.dataset.emo,true));
+    sh.querySelector('#cform').onsubmit=e=>{e.preventDefault();const i=document.getElementById('ctext');const t=i.value.trim();if(!t)return;i.value='';say(t,false)};
+  }
+  drawChat(true);
+  if(S.chatT)clearInterval(S.chatT);S.chatT=setInterval(syncOnce,3000);
+  const f=document.getElementById('chatfab');if(f)f.innerHTML='💬';
+}
+function closeChat(){S.chatOpen=false;if(S.chatT){clearInterval(S.chatT);S.chatT=null}const sh=document.getElementById('chatsheet');if(sh)sh.remove()}
+function drawChat(scroll){
+  const sh=document.getElementById('chatsheet');if(!sh||!S.online)return;
+  const muted=store.get(muteKey(),false),other=pname(1-S.online.slot);
+  sh.querySelector('header b').textContent='Chat with '+other;
+  sh.querySelector('#cmute').textContent=muted?'Unmute':'Mute';
+  const list=(S.online.chat||[]).filter(m=>!muted||m.s===S.online.slot);
+  const box=sh.querySelector('#clist');const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
+  box.innerHTML=list.length?list.map(m=>`<div class="msg ${m.s===S.online.slot?'me':''} ${m.e?'big':''}">${esc(m.t)}${m.e?'':`<small>${new Date(m.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small>`}</div>`).join('')
+    :`<p class="small muted" style="text-align:center;margin:auto">${muted?`You muted ${esc(other)}.`:'Talk trash, celebrate goals. Only you and '+esc(other)+' see this.'}</p>`;
+  if(scroll||atBottom)box.scrollTop=box.scrollHeight;
+}
+async function say(text,emoji){
+  try{await onlinePost({action:'say',text,emoji});if(emoji)burst(text,'You');drawChat(true)}catch(e){toast(e.message);const i=document.getElementById('ctext');if(!emoji&&i&&!i.value)i.value=text}
 }
 
 // ================= Engines =================
