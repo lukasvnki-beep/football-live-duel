@@ -156,7 +156,7 @@ export default async function handler(req, res) {
       const base = {};
       for (const [id, st] of Object.entries(s.base || {})) {
         if (!ids.has(id) || !st || typeof st !== 'object') continue;
-        const o = {}; for (const key of ['goals', 'assists', 'yellow', 'red', 'tackles', 'shotsOn', 'saves', 'fouls', 'passes', 'minutes']) o[key] = num(st[key]);
+        const o = {}; for (const key of ['goals', 'assists', 'yellow', 'red', 'tackles', 'interceptions', 'shotsOn', 'shotsOff', 'keyPasses', 'dribbles', 'duelsWon', 'foulsDrawn', 'penWon', 'penMissed', 'penSaved', 'saves', 'fouls', 'passes', 'passFail', 'minutes']) o[key] = num(st[key]);
         base[id] = o;
       }
       const start = { el: Math.max(0, Math.min(130, Number(s.el) || 0)), keys: (Array.isArray(s.keys) ? s.keys : []).slice(0, 200).map(x => clean(x, 60)), base };

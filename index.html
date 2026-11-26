@@ -278,9 +278,25 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 const TEAMS={};   // key -> {name, short, color}
 const PL={};      // player id -> {id, team, name, pos, form?, num?}
 const SQUAD={};   // team key -> [player ids]
-const POINTS={goal:10,assist:7,yellow:-3,second:-5,red:-8};
+const POINTS={goal:40,assist:25,yellow:-10,second:-15,red:-25};
 // Stat points (real matches): from each player's running match totals
-const STATP={tackle:1,shotOn:2,save:1,foul:-1,passesPer:10};
+// Points per stat (from API-Football player statistics, updated about once a minute)
+const STATDEF=[
+  ['passes','completed pass','completed passes',1],
+  ['passFail','missed pass','missed passes',-1],
+  ['keyPasses','key pass','key passes',5],
+  ['shotsOn','shot on target','shots on target',6],
+  ['shotsOff','shot off target','shots off target',2],
+  ['dribbles','successful dribble','successful dribbles',4],
+  ['tackles','tackle','tackles',4],
+  ['interceptions','interception','interceptions',4],
+  ['duelsWon','duel won','duels won',2],
+  ['foulsDrawn','foul won','fouls won',2],
+  ['fouls','foul committed','fouls committed',-3],
+  ['saves','save','saves',6],
+  ['penWon','penalty won','penalties won',10],
+  ['penMissed','penalty missed','penalties missed',-15],
+  ['penSaved','penalty saved','penalties saved',20]];
 const TOP_LEAGUES=new Set([1,2,3,4,39,40,45,48,61,78,88,94,135,140,143,144,203,253,848,9,10]);
 
 function hash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
@@ -434,15 +450,25 @@ function viewHome(){
     <div class="rules">
       <h3>How points work</h3>
       <div class="ptable">
-        <span>Goal</span><span class="pos">+10</span>
-        <span>Assist</span><span class="pos">+7</span>
-        <span>Shot on target</span><span class="pos">+2</span>
-        <span>Tackle</span><span class="pos">+1</span>
-        <span>Every 10 completed passes</span><span class="pos">+1</span>
-        <span>Goalkeeper save</span><span class="pos">+1</span>
-        <span>Foul committed</span><span class="neg">−1</span>
-        <span>Yellow card</span><span class="neg">−3</span>
-        <span>Red card (second yellow adds −5)</span><span class="neg">−8</span>
+        <span>Goal</span><span class="pos">+40</span>
+        <span>Assist</span><span class="pos">+25</span>
+        <span>Penalty saved (goalkeeper)</span><span class="pos">+20</span>
+        <span>Penalty won</span><span class="pos">+10</span>
+        <span>Shot on target</span><span class="pos">+6</span>
+        <span>Goalkeeper save</span><span class="pos">+6</span>
+        <span>Key pass (a pass that leads to a shot)</span><span class="pos">+5</span>
+        <span>Successful dribble</span><span class="pos">+4</span>
+        <span>Tackle</span><span class="pos">+4</span>
+        <span>Interception</span><span class="pos">+4</span>
+        <span>Shot off target</span><span class="pos">+2</span>
+        <span>Duel won</span><span class="pos">+2</span>
+        <span>Foul won</span><span class="pos">+2</span>
+        <span>Completed pass</span><span class="pos">+1</span>
+        <span>Missed pass</span><span class="neg">−1</span>
+        <span>Foul committed</span><span class="neg">−3</span>
+        <span>Yellow card</span><span class="neg">−10</span>
+        <span>Penalty missed</span><span class="neg">−15</span>
+        <span>Red card (second yellow: −25 in total)</span><span class="neg">−25</span>
       </div>
       <h3 style="margin-top:14px">Power-ups</h3>
       <div class="ptable">
@@ -962,13 +988,11 @@ function statsOf(raw){const s=(raw&&raw[0])||{};const n=v=>{const x=parseInt(v,1
   const tot=n(s.passes&&s.passes.total);let acc=n(s.passes&&s.passes.accuracy);
   if(typeof (s.passes&&s.passes.accuracy)==='string'&&String(s.passes.accuracy).includes('%'))acc=Math.round(tot*acc/100);
   return {goals:n(s.goals&&s.goals.total),assists:n(s.goals&&s.goals.assists),yellow:n(s.cards&&s.cards.yellow),red:n(s.cards&&s.cards.red),
-    tackles:n(s.tackles&&s.tackles.total),shotsOn:n(s.shots&&s.shots.on),saves:n(s.goals&&s.goals.saves),fouls:n(s.fouls&&s.fouls.committed),passes:acc,minutes:n(s.games&&s.games.minutes)}}
-function statParts(st){const pl=(n,one,many)=>n===1?one:many;return [
-  [pl(st.shotsOn,'shot on target','shots on target'),st.shotsOn,st.shotsOn*STATP.shotOn],
-  [pl(st.tackles,'tackle','tackles'),st.tackles,st.tackles*STATP.tackle],
-  [pl(st.passes,'completed pass','completed passes'),st.passes,Math.floor(st.passes/STATP.passesPer)],
-  [pl(st.saves,'save','saves'),st.saves,st.saves*STATP.save],
-  [pl(st.fouls,'foul','fouls'),st.fouls,st.fouls*STATP.foul]].filter(x=>x[1])}
+    tackles:n(s.tackles&&s.tackles.total),interceptions:n(s.tackles&&s.tackles.interceptions),shotsOn:n(s.shots&&s.shots.on),shotsOff:Math.max(0,n(s.shots&&s.shots.total)-n(s.shots&&s.shots.on)),
+    keyPasses:n(s.passes&&s.passes.key),dribbles:n(s.dribbles&&s.dribbles.success),duelsWon:n(s.duels&&s.duels.won),foulsDrawn:n(s.fouls&&s.fouls.drawn),
+    penWon:n(s.penalty&&s.penalty.won),penMissed:n(s.penalty&&s.penalty.missed),penSaved:n(s.penalty&&s.penalty.saved),
+    saves:n(s.goals&&s.goals.saves),fouls:n(s.fouls&&s.fouls.committed),passes:Math.min(acc,tot||acc),passFail:Math.max(0,tot-acc),minutes:n(s.games&&s.games.minutes)}}
+function statParts(st){return STATDEF.map(([k,one,many,p])=>[(st[k]||0)===1?one:many,st[k]||0,(st[k]||0)*p]).filter(x=>x[1])}
 const statPoints=st=>statParts(st).reduce((s,x)=>s+x[2],0);
 function eventPointsFromTotals(st){return st.goals*POINTS.goal+st.assists*POINTS.assist+(st.red?POINTS.red:st.yellow*POINTS.yellow)}
 
@@ -1022,8 +1046,7 @@ function realEngine(f,replay,start){
           // Feed items for stat changes of picked players since the last update
           const now=E.elapsed?E.elapsed+'′':'';
           picked().forEach(id=>{if(!st[id])return;const before=E.prevStat[id];const cur=statPoints(st[id]);
-            if(before&&cur!==before.pts){const keys=['shotsOn','tackles','passes','saves','fouls'],lab={shotsOn:'shots on target',tackles:'tackles',passes:'completed passes',saves:'saves',fouls:'fouls'};
-              const parts=keys.map(k=>{const d=st[id][k]-(before.st[k]||0);return d?`${d>0?'+':''}${d} ${lab[k]}`:''}).filter(Boolean);
+            if(before&&cur!==before.pts){const parts=STATDEF.map(([k,one,many])=>{const d=(st[id][k]||0)-(before.st[k]||0);return d?`${d>0?'+':''}${d} ${Math.abs(d)===1?one:many}`:''}).filter(Boolean);
               E.statFeed.push({ord:(E.elapsed||0)+0.99,el:E.elapsed||0,lbl:now,type:'stats',team:PL[id].team,player:id,text:parts.join(', '),pts:{[id]:cur-before.pts}})}
             E.prevStat[id]={pts:cur,st:st[id]}});
           if(FINAL.has(E.status)){E.done=true;E.final=true}
