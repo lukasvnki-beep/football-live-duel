@@ -227,6 +227,13 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .tag.double{background:rgba(255,215,124,.2);color:var(--gold)}
 .tag.neg{background:rgba(255,107,107,.2);color:var(--red)}
 .brow.pwr span:first-child{color:var(--muted)}
+.dare{background:var(--panel);border:1px dashed var(--gold);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.dare label{font-size:.88rem}
+.dare textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text);font:inherit;resize:vertical;width:100%}
+.dchips{display:flex;flex-wrap:wrap;gap:6px}
+.dchip{font-size:.75rem;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.dare-res{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:16px}
+.dare-res q{font-family:var(--display);font-size:1.6rem;font-weight:700;line-height:1.15;text-wrap:balance}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -445,7 +452,7 @@ function fixtureCard(f){
 // ================= Draft =================
 function startDuel(f,firstPicker=0){
   stopTimer();
-  S.fixture=f;S.picks=[[],[]];S.turn=S.mode==='cpu'?0:firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
+  S.fixture=f;S.picks=[[],[]];S.dares=['',''];S.turn=S.mode==='cpu'?0:firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
   go('draft');
   if(f.kind==='real'&&!(SQUAD[f.home]&&SQUAD[f.home].length&&SQUAD[f.away]&&SQUAD[f.away].length))loadPlayers(f);
 }
@@ -498,6 +505,11 @@ function viewDraft(){
     </div>
     <p class="small muted" style="margin:0">${hint}</p>
     ${body}
+    ${S.draftLoading||S.draftErr?'':`<div class="dare">
+      <label for="dare"><b>🔒 Forfeit for ${esc(pname(1-i))} if they lose</b> <span class="muted">(optional, stays hidden until full time)</span></label>
+      <textarea id="dare" maxlength="120" rows="2" placeholder="Leave empty to play just for fun">${esc(S.dares[i])}</textarea>
+      <div class="dchips">${DARES.slice(0,4).map(d=>`<button class="dchip" data-dare="${esc(d)}">${esc(d)}</button>`).join('')}</div>
+    </div>`}
   </section>
   <div class="actionbar"><div><button class="btn" id="lock" ${mine.length<2?'disabled':''}>${mine.length<2?`Pick ${2-mine.length} more`:'Lock in picks'}</button></div></div>`;
   document.getElementById('back').onclick=()=>go('home');
@@ -508,7 +520,11 @@ function viewDraft(){
     if(k>=0)mine.splice(k,1);else{if(mine.length>=2)mine.shift();mine.push(id)}
     const y=window.scrollY;viewDraft();window.scrollTo(0,y);
   });
+  const dr=document.getElementById('dare');
+  if(dr){dr.oninput=()=>{S.dares[i]=dr.value.trim()};
+    app.querySelectorAll('[data-dare]').forEach(b=>b.onclick=()=>{dr.value=b.dataset.dare;S.dares[i]=b.dataset.dare})}
   document.getElementById('lock').onclick=()=>{
+    if(S.mode==='cpu'&&S.dares[0])S.dares[1]=DARES[Math.floor(Math.random()*DARES.length)];
     if(mine.length<2)return;
     if(S.mode==='cpu'){S.picks[1]=cpuPicks(f);go('reveal');return}
     if(i===S.first){S.turn=1-i;S.filter='all';go('pass')}else go('reveal');
@@ -543,6 +559,8 @@ function lineupCard(i,pts,a){
     const v=pts?(pts[id]||0)+(a?(a.adj[i][id]||0):0):0;
     return `<div class="pp ${o?'off':''}">${crest(p.team)}<div class="nm">${esc(p.name)}${tags}<span>${p.pos||'–'} · ${esc(TEAMS[p.team].short)}${o?' · sent off':''}</span></div>${pts?`<div class="pts num">${v}</div>`:''}</div>`}).join('')}</div>`;
 }
+
+const DARES=['Buys the next kebab','Wears my team\'s shirt tomorrow','Posts the result on their story','Uses a profile photo I choose for 3 days','Buys the drinks next match night','Sings the winner\'s club anthem on video'];
 
 // ================= Power-ups =================
 const POWER={double:{dur:10,label:'Double Points',icon:'⚡'},neg:{dur:5,label:'Negative Points',icon:'☠'}};
@@ -625,6 +643,7 @@ function viewReveal(){
       <div class="matchscore">${crest(f.home)}<span>${esc(TEAMS[f.home].short)}</span><span class="s">vs</span><span>${esc(TEAMS[f.away].short)}</span>${crest(f.away)}</div>
     </div>
     <div class="lineups">${lineupCard(0)}${lineupCard(1)}</div>
+    ${S.dares&&(S.dares[0]||S.dares[1])?`<div class="note" style="text-align:center">🔒 <b>Forfeits are locked in.</b> The winner unlocks the loser's forfeit at full time.</div>`:''}
     <p class="small muted" style="margin:0;text-align:center">${note}</p>
   </section>
   <div class="actionbar"><div><button class="btn" id="ko">${f.kind==='sim'?'Kick off':replay?'Start replay':'Follow live'}</button></div></div>`;
@@ -638,12 +657,12 @@ function viewReveal(){
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
   store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan});
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
   Object.assign(TEAMS,a.teams);a.players.forEach(p=>{if(!PL[p.id])PL[p.id]=p});
-  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;
+  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status));go('live');S.eng.start();
@@ -955,9 +974,12 @@ function viewResult(){
       <div class="trophy" aria-hidden="true">${w===-1?'🤝':'🏆'}</div>
       <div class="eyebrow" style="color:var(--gold)">Full time · ${esc(TEAMS[f.home].short)} ${t.hs}–${t.as} ${esc(TEAMS[f.away].short)}</div>
       <h2>${w===-1?'It\'s a draw':pname(w)==='You'?'You win':esc(pname(w))+' wins'}</h2>
-      <div class="final num">${tot[0]} – ${tot[1]}</div>
+      <div class="final num">${tot[0]<0?"−"+(-tot[0]):tot[0]} : ${tot[1]<0?"−"+(-tot[1]):tot[1]}</div>
       <div class="small muted">${esc(pname(0))} vs ${esc(pname(1))}</div>
     </div>
+    ${S.dares&&(S.dares[0]||S.dares[1])?(w===-1?`<div class="dare-res"><b>🤝 Draw.</b> Both forfeits stay locked.</div>`
+      :S.dares[w]?`<div class="dare-res"><span class="eyebrow" style="color:var(--gold)">🔓 Forfeit unlocked</span><b>${esc(pname(1-w))} must:</b><q>${esc(S.dares[w])}</q><span class="small muted">Chosen by ${esc(pname(w))}</span></div>`
+      :`<div class="dare-res">${esc(pname(w))} won but didn't set a forfeit. ${esc(pname(1-w))} got lucky.</div>`):''}
     ${E.kind==='real'?'<p class="small muted" style="margin:0;text-align:center">Final points use the official full-match stats from API-Football.</p>':''}
     <div class="breakdown"><h3>${esc(pname(0))} · ${tot[0]} pts</h3>${lines(0)}</div>
     <div class="breakdown"><h3>${esc(pname(1))} · ${tot[1]} pts</h3>${lines(1)}</div>
@@ -967,7 +989,7 @@ function viewResult(){
   document.getElementById('home').onclick=()=>go('home');
   document.getElementById('again').onclick=()=>startDuel(f,S.mode==='friend'?1-S.first:0);
   document.getElementById('copy').onclick=()=>{
-    const txt=`Football Live Duel: ${pname(0)} ${tot[0]} – ${tot[1]} ${pname(1)} (${TEAMS[f.home].name} ${t.hs}–${t.as} ${TEAMS[f.away].name}). ${w===-1?'Draw!':pname(w)+' wins!'}`;
+    const txt=`Football Live Duel: ${pname(0)} ${tot[0]} – ${tot[1]} ${pname(1)} (${TEAMS[f.home].name} ${t.hs}–${t.as} ${TEAMS[f.away].name}). ${w===-1?'Draw!':pname(w)+' wins!'}${w!==-1&&S.dares&&S.dares[w]?` Forfeit for ${pname(1-w)}: ${S.dares[w]}`:''}`;
     try{navigator.clipboard.writeText(txt).then(()=>toast('Copied'),()=>toast(txt))}catch(e){toast(txt)}
   };
 }
