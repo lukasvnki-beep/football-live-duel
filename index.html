@@ -233,6 +233,7 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .dchips{display:flex;flex-wrap:wrap;gap:6px}
 .dchip{font-size:.75rem;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .dare-res{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:16px}
+.dq{font-family:var(--display);font-size:1.4rem;font-weight:700;line-height:1.15}
 .dare-res q{font-family:var(--display);font-size:1.6rem;font-weight:700;line-height:1.15;text-wrap:balance}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -452,7 +453,7 @@ function fixtureCard(f){
 // ================= Draft =================
 function startDuel(f,firstPicker=0){
   stopTimer();
-  S.fixture=f;S.picks=[[],[]];S.dares=['',''];S.turn=S.mode==='cpu'?0:firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
+  S.fixture=f;S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=S.mode==='cpu'?0:firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
   go('draft');
   if(f.kind==='real'&&!(SQUAD[f.home]&&SQUAD[f.home].length&&SQUAD[f.away]&&SQUAD[f.away].length))loadPlayers(f);
 }
@@ -505,8 +506,8 @@ function viewDraft(){
     </div>
     <p class="small muted" style="margin:0">${hint}</p>
     ${body}
-    ${S.draftLoading||S.draftErr?'':`<div class="dare">
-      <label for="dare"><b>🔒 Forfeit for ${esc(pname(1-i))} if they lose</b> <span class="muted">(optional, stays hidden until full time)</span></label>
+    ${S.draftLoading||S.draftErr||S.mode==='cpu'?'':`<div class="dare">
+      <label for="dare"><b>🔒 Propose a forfeit for ${esc(pname(1-i))} if they lose</b> <span class="muted">(optional. ${esc(pname(1-i))} has to accept it before kickoff)</span></label>
       <textarea id="dare" maxlength="120" rows="2" placeholder="Leave empty to play just for fun">${esc(S.dares[i])}</textarea>
       <div class="dchips">${DARES.slice(0,4).map(d=>`<button class="dchip" data-dare="${esc(d)}">${esc(d)}</button>`).join('')}</div>
     </div>`}
@@ -524,7 +525,7 @@ function viewDraft(){
   if(dr){dr.oninput=()=>{S.dares[i]=dr.value.trim()};
     app.querySelectorAll('[data-dare]').forEach(b=>b.onclick=()=>{dr.value=b.dataset.dare;S.dares[i]=b.dataset.dare})}
   document.getElementById('lock').onclick=()=>{
-    if(S.mode==='cpu'&&S.dares[0])S.dares[1]=DARES[Math.floor(Math.random()*DARES.length)];
+    if(S.mode==='cpu')S.dares=['',''];
     if(mine.length<2)return;
     if(S.mode==='cpu'){S.picks[1]=cpuPicks(f);go('reveal');return}
     if(i===S.first){S.turn=1-i;S.filter='all';go('pass')}else go('reveal');
@@ -643,12 +644,21 @@ function viewReveal(){
       <div class="matchscore">${crest(f.home)}<span>${esc(TEAMS[f.home].short)}</span><span class="s">vs</span><span>${esc(TEAMS[f.away].short)}</span>${crest(f.away)}</div>
     </div>
     <div class="lineups">${lineupCard(0)}${lineupCard(1)}</div>
-    ${S.dares&&(S.dares[0]||S.dares[1])?`<div class="note" style="text-align:center">🔒 <b>Forfeits are locked in.</b> The winner unlocks the loser's forfeit at full time.</div>`:''}
+    ${[0,1].filter(i=>S.dares&&S.dares[i]).map(i=>`<div class="dare">
+      <span class="small muted">Forfeit from <b>${esc(pname(i))}</b> for <b>${esc(pname(1-i))}</b>, if they lose:</span>
+      <q class="dq">${esc(S.dares[i])}</q>
+      ${S.dareOk[i]?`<span class="small" style="color:var(--accent)">✓ Accepted by ${esc(pname(1-i))}</span>`
+        :`<div class="dchips"><button class="btn" style="padding:10px" data-acc="${i}">${esc(pname(1-i))}: accept</button><button class="btn ghost" style="padding:10px" data-ref="${i}">Refuse</button></div>`}
+    </div>`).join('')}
+    ${S.dares&&(S.dares[0]||S.dares[1])?`<p class="small muted" style="margin:0;text-align:center">Only accepted forfeits count. Anything not accepted at kickoff is dropped.</p>`:''}
     <p class="small muted" style="margin:0;text-align:center">${note}</p>
   </section>
   <div class="actionbar"><div><button class="btn" id="ko">${f.kind==='sim'?'Kick off':replay?'Start replay':'Follow live'}</button></div></div>`;
   document.getElementById('back').onclick=()=>go('home');
+  app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{S.dareOk[+b.dataset.acc]=true;viewReveal()});
+  app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{S.dares[+b.dataset.ref]='';viewReveal()});
   document.getElementById('ko').onclick=()=>{
+    [0,1].forEach(i=>{if(!S.dareOk[i])S.dares[i]=''});
     S.speed=1;S.paused=false;resetPowers();
     if(f.kind==='sim'){S.eng=simEngine(f);go('live');startTimer()}
     else{S.eng=realEngine(f,replay);saveActive();go('live');S.eng.start()}
@@ -657,12 +667,12 @@ function viewReveal(){
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
   store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares});
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
   Object.assign(TEAMS,a.teams);a.players.forEach(p=>{if(!PL[p.id])PL[p.id]=p});
-  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];
+  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status));go('live');S.eng.start();
