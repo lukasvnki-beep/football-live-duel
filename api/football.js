@@ -12,7 +12,10 @@
 
 import { mock } from './_mock.js';
 
-const BASE = 'https://v3.football.api-sports.io/';
+// API-Football blocks shared cloud IPs, so production goes through Lukas's own server (relay/ folder),
+// which has a dedicated IP. Empty = call API-Football directly.
+const RELAY = process.env.API_RELAY_URL || '';
+const BASE = RELAY ? RELAY.replace(/\/?$/, '/') : 'https://v3.football.api-sports.io/';
 // Only the production site talks to API-Football. Preview links get fake matches (no requests spent).
 const USE_MOCK = process.env.VERCEL_ENV !== 'production';
 
