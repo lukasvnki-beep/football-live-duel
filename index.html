@@ -677,7 +677,7 @@ function viewReveal(){
   app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:true}).then(()=>viewReveal(),e=>toast(e.message));return}S.dareOk[+b.dataset.acc]=true;viewReveal()});
   app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:false}).then(()=>viewReveal(),e=>toast(e.message));return}S.dares[+b.dataset.ref]='';viewReveal()});
   document.getElementById('ko').onclick=()=>{
-    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false);go('live');S.eng.start();startSync(15000);return}
+    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false,S.online&&S.online.state&&S.online.state.start);go('live');S.eng.start();startSync(15000);return}
     [0,1].forEach(i=>{if(!S.dareOk[i])S.dares[i]=''});
     S.speed=1;S.paused=false;resetPowers();
     if(f.kind==='sim'){S.eng=simEngine(f);go('live');startTimer()}
@@ -687,7 +687,7 @@ function viewReveal(){
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
   store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk});
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
@@ -695,7 +695,7 @@ function resumeDuel(){
   S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
-  S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status));go('live');S.eng.start();
+  S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status)&&!a.start,a.start);go('live');S.eng.start();
 }
 
 // ================= Online duels (two phones) =================
@@ -778,7 +778,7 @@ async function openOnline(code){
       if(!me||!me.ready){S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;go('draft');loadPlayers(S.fixture);return}
       if(!st.both){go('wait');startSync(4000);return}
       const started=LIVE.has(st.fx.status)||Date.now()>Date.parse(st.fx.kickoff);
-      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false);go('live');S.eng.start();startSync(15000)}else{go('reveal');startSync(5000)}
+      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false,st.start);go('live');S.eng.start();startSync(15000)}else{go('reveal');startSync(5000)}
     }catch(e){toast(e.message);store.del('fld.online');go('home')}
     return;
   }
@@ -917,17 +917,25 @@ function parseEvents(raw,f){
   return out.sort((a,b)=>a.ord-b.ord);
 }
 
-function realEngine(f,replay){
+// Joining a match already in progress: only what happens from that moment counts.
+// The duel's start = {el, keys (events already shown), base (picked players' stats at that moment)}.
+const evKey=e=>e.type+'|'+(e.player||'')+'|'+e.lbl;
+function statDiff(cur,base){if(!base)return cur;const o={};for(const k in cur)o[k]=Math.max(0,(cur[k]||0)-(base[k]||0));if(cur.red&&base.red)o.red=0;return o}
+function realEngine(f,replay,start){
   const picked=()=>new Set([...S.picks[0],...S.picks[1]]);
-  const E={kind:'real',replay,data:null,events:[],stats:{},prevStat:{},statFeed:[],cursor:replay?0:null,maxMin:90,done:false,final:false,
+  const E={kind:'real',replay,kick:replay?null:(start||null),data:null,events:[],stats:{},prevStat:{},statFeed:[],cursor:replay?0:null,maxMin:90,done:false,final:false,
     sentOff:new Set(),lastFetch:null,err:null,pollT:null,status:f.status,elapsed:f.elapsed,goals:f.goals||{home:0,away:0},
     async fetch(){
       try{
         const r=await api('fixtures',{id:f.apiId,timezone:TZ});const x=r[0];if(!x)throw new Error('This match was not found.');
         E.data=x;E.err=null;E.lastFetch=Date.now();
         E.status=x.fixture.status.short;E.elapsed=x.fixture.status.elapsed;E.goals=x.goals;f.status=E.status;f.elapsed=E.elapsed;f.goals=x.goals;
-        E.events=parseEvents(x.events,f);
-        const st={};(x.players||[]).forEach(t=>{const k=teamKey(t.team);(t.players||[]).forEach(pp=>{const id=regPlayer(pp.player,k);if(id)st[id]=statsOf(pp.statistics)})});
+        let evs=parseEvents(x.events,f);
+        const raw={};(x.players||[]).forEach(t=>{const k=teamKey(t.team);(t.players||[]).forEach(pp=>{const id=regPlayer(pp.player,k);if(id)raw[id]=statsOf(pp.statistics)})});
+        if(!E.replay&&!E.kick)await E.setStart({el:LIVE.has(E.status)||FINAL.has(E.status)?(E.elapsed||0):0,keys:evs.map(evKey),base:Object.fromEntries([...picked()].filter(id=>raw[id]).map(id=>[id,raw[id]]))});
+        if(E.kick){const skip=new Set(E.kick.keys||[]);evs=evs.filter(e=>!skip.has(evKey(e))&&!(e.type==='var'&&e.ref&&skip.has(evKey(e.ref))))}
+        E.events=evs;
+        const st={};for(const id in raw)st[id]=E.kick?statDiff(raw[id],E.kick.base&&E.kick.base[id]):raw[id];
         E.stats=st;
         E.maxMin=Math.max(90,...E.events.map(e=>e.el+1));
         if(!E.replay){
@@ -942,6 +950,11 @@ function realEngine(f,replay){
         }
         E.sentOff=new Set(E.shown().filter(e=>e.type==='red'||e.type==='second').map(e=>e.player));
       }catch(e){E.err=e.message}
+    },
+    async setStart(cand){
+      E.kick=cand;
+      if(S.mode==='online'&&S.online){try{await onlinePost({action:'start',start:cand});if(S.online.state&&S.online.state.start)E.kick=S.online.state.start}catch(e){}}
+      else saveActive();
     },
     shown(){
       if(E.replay&&!E.final)return E.events.filter(e=>e.el<=E.cursor);

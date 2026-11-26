@@ -4,6 +4,7 @@
 //   duel:<code>:meta     fixture + teams + names
 //   duel:<code>:p0 / p1  that player's picks, proposed forfeit, accepted flag (+ hashed token)
 //   duel:<code>:powers   list of power-ups used, in order
+//   duel:<code>:start    when the duel started on a match already in progress (so earlier points don't count)
 
 import crypto from 'node:crypto';
 
@@ -37,9 +38,9 @@ function limited(ip) {
 
 async function load(code) {
   const k = 'duel:' + code;
-  const [meta, p0, p1, powers] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1'], ['LRANGE', k + ':powers', '0', '-1']]).then(([m, pw]) => [...m, pw]);
+  const [meta, p0, p1, start, powers] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start'], ['LRANGE', k + ':powers', '0', '-1']]).then(([m, pw]) => [...m, pw]);
   if (!meta) return null;
-  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)) };
+  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null };
 }
 
 // What a given player is allowed to see
@@ -52,7 +53,7 @@ function view(d, slot) {
     dare: (both || i === slot) ? p.dare || '' : '',
     dareOk: !!p.dareOk,
   });
-  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers };
+  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null };
 }
 
 function slotOf(d, token) {
@@ -134,6 +135,21 @@ export default async function handler(req, res) {
       if (!other || !other.dare) return res.status(400).json({ error: 'There is no forfeit to answer.' });
       const upd = b.accept ? { ...other, dareOk: true } : { ...other, dare: '', dareOk: false };
       await redis([['SET', k + ':p' + o, JSON.stringify(upd), 'KEEPTTL']]);
+    } else if (b.action === 'start') {
+      // First phone to open the live match records the starting point; the other phone reuses it.
+      const other = d.p[1 - slot];
+      if (!me.ready || !other || !other.ready) return res.status(409).json({ error: 'Both players must lock their picks first.' });
+      const s = b.start || {};
+      const ids = new Set([...(me.picks || []), ...(other.picks || [])]);
+      const num = v => Math.max(0, Math.min(999, Math.floor(Number(v) || 0)));
+      const base = {};
+      for (const [id, st] of Object.entries(s.base || {})) {
+        if (!ids.has(id) || !st || typeof st !== 'object') continue;
+        const o = {}; for (const key of ['goals', 'assists', 'yellow', 'red', 'tackles', 'shotsOn', 'saves', 'fouls', 'passes', 'minutes']) o[key] = num(st[key]);
+        base[id] = o;
+      }
+      const start = { el: Math.max(0, Math.min(130, Number(s.el) || 0)), keys: (Array.isArray(s.keys) ? s.keys : []).slice(0, 200).map(x => clean(x, 60)), base };
+      await redis([['SET', k + ':start', JSON.stringify(start), 'EX', String(TTL), 'NX']]);
     } else if (b.action === 'power') {
       const type = b.type === 'double' ? 'double' : b.type === 'neg' ? 'neg' : null;
       if (!type) return res.status(400).json({ error: 'Unknown power-up.' });
