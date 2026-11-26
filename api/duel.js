@@ -5,6 +5,8 @@
 //   duel:<code>:p0 / p1  that player's picks, proposed forfeit, accepted flag (+ hashed token)
 //   duel:<code>:powers   list of power-ups used, in order
 //   duel:<code>:chat     last chat messages and emoji reactions between the two players
+//   duel:<code>:coin     who picks first ({first: 0|1}), flipped when the friend joins
+//   duel:<code>:dp:<n>   the nth draft pick (0-3), order first, other, first, other; no duplicates
 //   duel:<code>:start    when the duel started on a match already in progress (so earlier points don't count)
 
 import crypto from 'node:crypto';
@@ -40,9 +42,9 @@ function limited(ip) {
 
 async function load(code) {
   const k = 'duel:' + code;
-  const [meta, p0, p1, start, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
+  const [meta, p0, p1, start, coin, d0, d1, d2, d3, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start', k + ':coin', k + ':dp:0', k + ':dp:1', k + ':dp:2', k + ':dp:3'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
   if (!meta) return null;
-  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, chat: (chat || []).map(x => JSON.parse(x)) };
+  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, coin: coin ? JSON.parse(coin) : null, dp: [d0, d1, d2, d3].filter(Boolean).map(x => JSON.parse(x)), chat: (chat || []).map(x => JSON.parse(x)) };
 }
 
 // What a given player is allowed to see
@@ -56,7 +58,7 @@ function view(d, slot) {
     dareOk: !!p.dareOk,
     capt: (both || i === slot) ? (p.capt === 1 ? 1 : 0) : 0,
   });
-  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, chat: slot >= 0 ? d.chat : [] };
+  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, draft: d.coin ? { first: d.coin.first, picks: d.dp } : null, chat: slot >= 0 ? d.chat : [] };
 }
 
 // Link a duel player to their profile (api/league.js) so the result counts in the rankings
@@ -125,6 +127,8 @@ export default async function handler(req, res) {
       const pid = await profileId(b.pid, b.ptok);
       const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: clean(b.name, 14) || 'Player 2', tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
       if (!ok[0]) return res.status(409).json({ error: 'Two players are already in this duel.' });
+      // Coin flip: decides who picks first
+      if (b.draft) await redis([['SET', k + ':coin', JSON.stringify({ first: crypto.randomInt(2), at: Date.now() }), 'EX', String(TTL), 'NX']]);
       const d2 = await load(code);
       return res.status(200).json({ token, state: view(d2, 1) });
     }
@@ -140,6 +144,29 @@ export default async function handler(req, res) {
       const players = (Array.isArray(b.players) ? b.players : []).slice(0, 2).map(p => ({ id: clean(p.id, 24), team: clean(p.team, 12), name: clean(p.name, 60), pos: clean(p.pos, 4), num: clean(p.num, 3) }));
       const upd = { ...me, picks, players, dare: clean(b.dare, 120), capt: b.capt === 1 ? 1 : 0, ready: true };
       await redis([['SET', k + ':p' + slot, JSON.stringify(upd), 'KEEPTTL']]);
+    } else if (b.action === 'pick') {
+      // Turn-by-turn draft after the coin flip: first, other, first, other. A player can only be picked once.
+      if (!d.coin) return res.status(409).json({ error: 'Waiting for your friend to join.' });
+      const n = d.dp.length;
+      if (n >= 4) return res.status(409).json({ error: 'All players are picked.' });
+      const turn = n % 2 === 0 ? d.coin.first : 1 - d.coin.first;
+      if (turn !== slot) return res.status(409).json({ error: "It's not your turn." });
+      const id = String(b.id || '');
+      if (!/^[a-z0-9]{1,24}$/.test(id)) return res.status(400).json({ error: 'Invalid player.' });
+      if (d.dp.some(x => x.id === id)) return res.status(409).json({ error: 'That player is already taken.' });
+      const pl = b.pl || {};
+      const entry = { s: slot, id, pl: { id, team: clean(pl.team, 12), name: clean(pl.name, 60), pos: clean(pl.pos, 4), num: clean(pl.num, 3) }, at: Date.now() };
+      const [got] = await redis([['SET', k + ':dp:' + n, JSON.stringify(entry), 'EX', String(TTL), 'NX']]);
+      if (!got) return res.status(409).json({ error: 'Too slow, try again.' });
+      if (n === 3) {
+        const all = [...d.dp, entry];
+        const cmds = [0, 1].map(s2 => { const mine = all.filter(x => x.s === s2); const p = d.p[s2];
+          return ['SET', k + ':p' + s2, JSON.stringify({ ...p, picks: mine.map(x => x.id), players: mine.map(x => x.pl), ready: true }), 'KEEPTTL']; });
+        await redis(cmds);
+      }
+    } else if (b.action === 'dare') {
+      if (d.start) return res.status(409).json({ error: 'The duel has already started.' });
+      await redis([['SET', k + ':p' + slot, JSON.stringify({ ...me, dare: clean(b.dare, 120), dareOk: false }), 'KEEPTTL']]);
     } else if (b.action === 'consent') {
       // Accept or refuse the forfeit the OTHER player proposed for me
       const o = 1 - slot, other = d.p[o];

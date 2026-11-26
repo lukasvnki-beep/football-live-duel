@@ -325,6 +325,29 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .steps div{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
 .steps b{font-family:var(--display);font-size:1.6rem;color:var(--accent);width:28px;text-align:center}
 @media (prefers-reduced-motion:reduce){.screen.enter,.sp-ball,.sp-bar i,.skel,.sp-logo{animation:none}}
+.flipscr{align-items:center;text-align:center;min-height:70vh;justify-content:center}
+.vsnames{display:flex;gap:14px;align-items:center;justify-content:center;font-family:var(--display);font-size:1.5rem;text-transform:uppercase}
+.vsnames span{color:var(--muted);font-size:1rem}
+.coinwrap{perspective:800px;height:190px;display:grid;place-items:center}
+.coin{width:150px;height:150px;position:relative;transform-style:preserve-3d;animation:flip0 2.2s cubic-bezier(.2,.7,.25,1) forwards}
+.coin.t{animation-name:flip1}
+.coin .face{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;backface-visibility:hidden;font-family:var(--display);font-weight:800;font-size:4rem;color:#2a1c00;background:radial-gradient(circle at 35% 30%,#fff3c4,#ffd77c 45%,#c9952f);box-shadow:inset 0 0 0 8px rgba(255,255,255,.25),0 14px 40px rgba(255,200,90,.25)}
+.coin .f1{transform:rotateY(180deg);background:radial-gradient(circle at 35% 30%,#d9fff0,#64efb0 45%,#1f9c6a);color:#04261a}
+@keyframes flip0{0%{transform:translateY(0) rotateY(0)}45%{transform:translateY(-70px) rotateY(1440deg)}100%{transform:translateY(0) rotateY(2160deg)}}
+@keyframes flip1{0%{transform:translateY(0) rotateY(0)}45%{transform:translateY(-70px) rotateY(1440deg)}100%{transform:translateY(0) rotateY(2340deg)}}
+.fliptxt{opacity:.6;font-size:1.05rem;transition:opacity .3s,transform .3s}
+.fliptxt.show{opacity:1;transform:scale(1.04)}
+.draftorder{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dslot{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 8px;min-width:0;display:flex;flex-direction:column}
+.dslot small{color:var(--muted);font-size:.66rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dslot b{font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dslot.me{border-color:rgba(100,239,176,.4)}
+.dslot.now{outline:2px solid var(--gold);animation:pulse 1.4s infinite}
+.prow .shirt{width:38px;height:34px;flex:none}
+.prow.taken{opacity:.55}
+.prow:disabled{cursor:default}
+.prow.busy{opacity:.6}
+@media (prefers-reduced-motion:reduce){.coin{animation-duration:.01s}}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.88rem;z-index:9}
 
 /* Profile */
@@ -520,14 +543,14 @@ const crest=(tid,cls='')=>`<span class="crest ${cls}" style="background:${TEAMS[
 const pname=i=>i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||(S.mode==='online'?'your friend':'Friend')));
 const backBtn=`<button class="back" id="back" aria-label="Back to matches"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></button>`;
 
-function go(view){S.view=view;if(view==='live'&&S.reactEng!==S.eng){S.reactEng=S.eng;S.reactSeen=null;S.reactInit=false}if(!['wait','reveal','live','join'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
+function go(view){S.view=view;if(view==='live'&&S.reactEng!==S.eng){S.reactEng=S.eng;S.reactSeen=null;S.reactInit=false}if(!['wait','reveal','live','join','flip','draft'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
   if(view==='home'&&S.mode==='online')S.names=store.get('fld.names',['You','Friend']);
   render();window.scrollTo(0,0);chatUI()}
 function render(){
   const TABS=['home','friends','ranking','profile','rules'];
   tabbar.hidden=!TABS.includes(S.view);
   tabbar.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===S.view?'page':'false'));
-  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin,friends:viewFriends,ranking:viewRanking,rules:viewRules,onboard:viewOnboard})[S.view]();
+  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin,flip:viewFlip,friends:viewFriends,ranking:viewRanking,rules:viewRules,onboard:viewOnboard})[S.view]();
   const sc=app.querySelector('.screen');if(sc&&S.lastView!==S.view){sc.classList.add('enter')}S.lastView=S.view;
 }
 tabbar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{buzz(8);go(b.dataset.tab)});
@@ -618,7 +641,7 @@ function fixtureCard(f){
 // ================= Draft =================
 function startDuel(f,firstPicker=0){
   stopTimer();
-  if(S.mode==='online'&&!S.joining){S.online=null;S.names=[store.get('fld.names',['You'])[0]||'You',''];firstPicker=0}
+  if(S.mode==='online'&&!S.joining){startOnline(f);return}
   S.joining=false;
   S.fixture=f;S.picks=[[],[]];S.capt=[0,0];S.swaps=[];S.dares=['',''];S.dareOk=[false,false];S.turn=S.mode==='cpu'?0:S.mode==='online'?(S.online?S.online.slot:0):firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
   go('draft');
@@ -645,16 +668,18 @@ async function loadPlayers(f){
 }
 const POSORDER={GK:0,DEF:1,MID:2,FWD:3,'':4};
 function viewDraft(){
+  if(S.mode==='online'&&S.online&&S.online.state&&S.online.state.draft)return viewDraftOnline();
   const f=S.fixture,i=S.turn,mine=S.picks[i];
+  const taken=new Set(S.mode==='online'?[]:S.picks[1-i]);
   const ids=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].filter(id=>S.filter==='all'||PL[id].team===S.filter);
   const list=f.kind==='real'?ids.slice().sort((a,b)=>(PL[b].starter?1:0)-(PL[a].starter?1:0)||(PL[a].team===f.home?0:1)-(PL[b].team===f.home?0:1)||POSORDER[PL[a].pos]-POSORDER[PL[b].pos]):ids;
   let body;
   if(S.draftLoading)body='<div class="plist">'+Array.from({length:7},()=>'<div class="skel" style="height:60px"></div>').join('')+'</div>';
   else if(S.draftErr)body=`<div class="note err"><b>Couldn't load players.</b> ${esc(S.draftErr)}<br><button class="linkbtn" id="retry" style="padding:6px 0">Try again</button></div>`;
   else body=`<div class="plist">${list.map(id=>{const p=PL[id];return `
-      <button class="prow" data-p="${id}" aria-pressed="${mine.includes(id)}">
+      <button class="prow" data-p="${id}" aria-pressed="${mine.includes(id)}" ${taken.has(id)?'disabled':''}>
         ${crest(p.team)}
-        <span class="nm"><b>${esc(p.name)}</b>${p.form?`<span class="stars" aria-label="Form ${p.form} of 3">${'★'.repeat(p.form)}${'☆'.repeat(3-p.form)}</span>`:`<span class="small muted">${p.starter?'Starting':f.lineupsOut?'Bench':'Squad'}${p.num?' · #'+esc(p.num):''}</span>`}</span>
+        <span class="nm"><b>${esc(p.name)}</b>${taken.has(id)?`<span class="small" style="color:var(--gold)">Taken by ${esc(pname(1-i))}</span>`:p.form?`<span class="stars" aria-label="Form ${p.form} of 3">${'★'.repeat(p.form)}${'☆'.repeat(3-p.form)}</span>`:`<span class="small muted">${p.starter?'Starting':f.lineupsOut?'Bench':'Squad'}${p.num?' · #'+esc(p.num):''}</span>`}</span>
         <span class="badge">${p.pos||'–'}</span>
         <span class="check" aria-hidden="true">${mine.includes(id)?'✓':''}</span>
       </button>`}).join('')}</div>`;
@@ -701,8 +726,55 @@ function viewDraft(){
     if(i===S.first){S.turn=1-i;S.filter='all';go('pass')}else go('reveal');
   };
 }
+function viewDraftOnline(){
+  const f=S.fixture,st=S.online.state,d=st.draft,me=S.online.slot,first=d.first;
+  const n=d.picks.length,turn=n>=4?-1:(n%2===0?first:1-first),myTurn=turn===me;
+  const by={};d.picks.forEach(x=>by[x.id]=x.s);
+  const mine=d.picks.filter(x=>x.s===me).map(x=>x.id),theirs=d.picks.filter(x=>x.s!==me).map(x=>x.id);
+  const nm=i=>(st.players[i]&&st.players[i].name)||'Your friend';
+  const ids=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].filter(id=>S.filter==='all'||PL[id].team===S.filter);
+  const list=ids.slice().sort((a,b)=>(by[a]!=null?1:0)-(by[b]!=null?1:0)||(PL[b].starter?1:0)-(PL[a].starter?1:0)||(PL[a].team===f.home?0:1)-(PL[b].team===f.home?0:1)||POSORDER[PL[a].pos]-POSORDER[PL[b].pos]);
+  const order=[first,1-first,first,1-first];
+  let body;
+  if(S.draftLoading)body='<div class="plist">'+Array.from({length:7},()=>'<div class="skel" style="height:60px"></div>').join('')+'</div>';
+  else if(S.draftErr)body=`<div class="note err"><b>Couldn't load players.</b> ${esc(S.draftErr)}<br><button class="linkbtn" id="retry" style="padding:6px 0">Try again</button></div>`;
+  else body=`<div class="plist">${list.map(id=>{const p=PL[id],t=by[id];return `
+      <button class="prow ${t!=null?'taken':''}" data-p="${id}" aria-pressed="${t===me}" ${t!=null||!myTurn||S.picking?'disabled':''}>
+        ${shirt(id)}
+        <span class="nm"><b>${esc(p.name)}</b>${t!=null?`<span class="small" style="color:${t===me?'var(--accent)':'var(--gold)'}">${t===me?'Your pick':'Picked by '+esc(nm(t))}</span>`:`<span class="small muted">${p.starter?'Starting':f.lineupsOut?'Bench':'Squad'} · ${esc(TEAMS[p.team].short)}</span>`}</span>
+        <span class="badge">${p.pos||'–'}</span>
+        <span class="check" aria-hidden="true">${t===me?'✓':''}</span>
+      </button>`}).join('')}</div>`;
+  app.innerHTML=`<section class="screen">
+    <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${esc(TEAMS[f.home].short)} vs ${esc(TEAMS[f.away].short)} · Draft</div><h2>${n>=4?'Draft complete':myTurn?'Your pick':esc(nm(turn))+' is picking…'}</h2></div></div>
+    <div class="draftorder">${order.map((s2,k)=>{const pk=d.picks[k];return `<div class="dslot ${s2===me?'me':''} ${k===n?'now':''}"><small>${k+1}. ${s2===me?'You':esc(nm(s2))}</small><b>${pk?esc(PL[pk.id]?PL[pk.id].name:'…'):k===n?(s2===me?'Your turn':'Picking…'):'—'}</b></div>`}).join('')}</div>
+    <div class="filter" role="group" aria-label="Filter by team">
+      <button data-flt="all" aria-pressed="${S.filter==='all'}">Both</button>
+      <button data-flt="${f.home}" aria-pressed="${S.filter===f.home}">${esc(TEAMS[f.home].short)}</button>
+      <button data-flt="${f.away}" aria-pressed="${S.filter===f.away}">${esc(TEAMS[f.away].short)}</button>
+    </div>
+    ${body}
+    <div class="dare">
+      <label for="dare"><b>🔒 Propose a forfeit for ${esc(nm(1-me))} if they lose</b> <span class="muted">(optional. They have to accept it before kickoff)</span></label>
+      <textarea id="dare" maxlength="120" rows="2" placeholder="Leave empty to play just for fun">${esc(S.dares[me]||'')}</textarea>
+      <div class="dchips">${DARES.slice(0,4).map(x=>`<button class="dchip" data-dare="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    </div>
+  </section>`;
+  document.getElementById('back').onclick=()=>go('home');
+  const rt=document.getElementById('retry');if(rt)rt.onclick=()=>loadPlayers(f);
+  app.querySelectorAll('[data-flt]').forEach(b=>b.onclick=()=>{S.filter=b.dataset.flt;viewDraft()});
+  app.querySelectorAll('.prow').forEach(b=>b.onclick=async()=>{
+    if(!myTurn||S.picking)return;const id=b.dataset.p,p=PL[id];S.picking=true;b.classList.add('busy');
+    try{await onlinePost({action:'pick',id,pl:{team:p.team,name:p.name,pos:p.pos,num:p.num!=null?String(p.num):''}});buzz(25)}catch(e){toast(e.message)}
+    S.picking=false;const y=window.scrollY;const st2=S.online.state;if(st2.both){go('reveal');startSync(5000)}else{viewDraft();window.scrollTo(0,y)}});
+  const dr=document.getElementById('dare');
+  const saveDare=v=>{S.dares[me]=v;onlinePost({action:'dare',dare:v}).catch(e=>toast(e.message))};
+  dr.onchange=()=>saveDare(dr.value.trim());dr.oninput=()=>{S.dares[me]=dr.value};
+  app.querySelectorAll('[data-dare]').forEach(b=>b.onclick=()=>{dr.value=b.dataset.dare;saveDare(b.dataset.dare)});
+}
+
 function cpuPicks(f){
-  let pool=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].map(id=>PL[id]);
+  let pool=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].filter(id=>!S.picks[0].includes(id)).map(id=>PL[id]);
   if(pool.some(p=>p.starter))pool=pool.filter(p=>p.starter);
   const w={GK:.4,DEF:1,MID:2.2,FWD:3.4,'':1};
   const out=[];while(out.length<2&&pool.length){const c=pool.filter(p=>!out.includes(p.id));const wt=p=>w[p.pos]*(p.form||2);const tot=c.reduce((s,p)=>s+wt(p),0);let r=Math.random()*tot;for(const p of c){r-=wt(p);if(r<=0){out.push(p.id);break}}}
@@ -730,7 +802,7 @@ function mstrip(){
   const f=S.fixture,E=S.eng,c=E?E.clock():null,t=E?E.tally():null;
   const g=t?[t.hs,t.as]:['',''];
   return `<div class="mstrip"><div class="tm"><span>${esc(TEAMS[f.home].name)}</span><b class="g">${g[0]}</b></div>
-    <div class="ck"><b>${c?esc(c.min):new Date(f.kickoff||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</b><span class="${c&&c.live?'live':''}">${c&&c.live?'<i class="dot"></i>':''}${c?esc(c.status):'Kickoff'}</span></div>
+    <div class="ck"><b>${c?esc(c.min):LIVE.has(f.status)?(f.status==='HT'?'HT':(f.elapsed||'')+'′'):new Date(f.kickoff||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</b><span class="${(c&&c.live)||(!c&&LIVE.has(f.status))?'live':''}">${(c&&c.live)||(!c&&LIVE.has(f.status))?'<i class="dot"></i>':''}${c?esc(c.status):LIVE.has(f.status)?'Live':'Kickoff'}</span></div>
     <div class="tm r"><b class="g">${g[1]}</b><span>${esc(TEAMS[f.away].name)}</span></div></div>`;
 }
 function duelPanel(live){
@@ -999,6 +1071,7 @@ function applyOnline(st){
   Object.entries(st.teams||{}).forEach(([k,t])=>{if(!TEAMS[k])TEAMS[k]=t});
   S.names=[(st.players[0]&&st.players[0].name)||'Player 1',(st.players[1]&&st.players[1].name)||''];
   st.players.forEach(p=>p&&(p.players||[]).forEach(x=>{if(!PL[x.id])PL[x.id]=x}));
+  if(st.draft){st.draft.picks.forEach(x=>{if(!PL[x.id]&&x.pl)PL[x.id]=x.pl});if(!st.both)S.picks=[0,1].map(i=>st.draft.picks.filter(x=>x.s===i).map(x=>x.id))}
   if(st.both){
     S.picks=[st.players[0].picks,st.players[1].picks];
     S.dares=[st.players[0].dare,st.players[1].dare];S.dareOk=[st.players[0].dareOk,st.players[1].dareOk];
@@ -1014,7 +1087,9 @@ function startSync(ms){
 async function syncOnce(){
   if(!S.online)return;
   try{const st=await onlineFetch({get:{code:S.online.code,token:S.online.token}});applyOnline(st);
-    if(S.view==='wait'){if(st.both)go('reveal');else viewWait()}
+    if(st.draft&&!st.both&&S.view==='wait'){go('flip')}
+    else if(S.view==='draft'&&st.draft){if(st.both){go('reveal');startSync(5000)}else viewDraft()}
+    else if(S.view==='wait'){if(st.both)go('reveal');else viewWait()}
     else if(S.view==='reveal')viewReveal();
     else if(S.view==='live')updateLive();
     chatUI();
@@ -1033,18 +1108,49 @@ async function submitOnlinePicks(){
     if(S.online.state.both){go('reveal');startSync(5000)}else{go('wait');startSync(4000)}
   }catch(e){toast(e.message);if(btn){btn.disabled=false;btn.textContent='Lock in picks'}}
 }
+// ---- New online flow: create the duel first, invite, coin flip, then take turns picking ----
+async function startOnline(f){
+  S.fixture=f;S.picks=[[],[]];S.capt=[0,0];S.swaps=[];S.dares=['',''];S.dareOk=[false,false];S.eng=null;S.filter='all';S.turn=0;S.flipDone=false;
+  S.names=[store.get('fld.names',['You'])[0]||'You',''];
+  const tt=toast('Creating your duel…');
+  try{
+    const pr=await ensureProfile(S.names[0]);
+    const b=await onlineFetch({body:{action:'create',name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
+    S.online={code:b.state.code,token:b.token,slot:0};applyOnline(b.state);
+    store.set('fld.online',{code:S.online.code,token:S.online.token,slot:0,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
+    go('wait');startSync(2500);
+    if(f.kind==='real'&&!(SQUAD[f.home]&&SQUAD[f.home].length&&SQUAD[f.away]&&SQUAD[f.away].length))loadPlayers(f);
+  }catch(e){toast(e.message)}
+}
+function viewFlip(){
+  const st=S.online.state,d=st.draft,first=d?d.first:0,me=S.online.slot;
+  const nm=i=>(st.players[i]&&st.players[i].name)||'Player';
+  app.innerHTML=`<section class="screen flipscr">
+    <div class="eyebrow" style="text-align:center">${esc(TEAMS[S.fixture.home].short)} vs ${esc(TEAMS[S.fixture.away].short)} · Online duel</div>
+    <h2 style="text-align:center;font-size:2.2rem;text-transform:uppercase">Coin toss</h2>
+    <div class="vsnames"><b>${esc(nm(0))}</b><span>vs</span><b>${esc(nm(1))}</b></div>
+    <div class="coinwrap"><div class="coin ${first===0?'h':'t'}" id="coin"><div class="face f0"><span>${esc(nm(0).slice(0,1).toUpperCase())}</span></div><div class="face f1"><span>${esc(nm(1).slice(0,1).toUpperCase())}</span></div></div></div>
+    <p class="fliptxt" id="fliptxt">Flipping…</p>
+  </section>`;
+  buzz(20);
+  setTimeout(()=>{const t=document.getElementById('fliptxt');if(!t)return;buzz([60,40,60]);
+    t.innerHTML=first===me?'<b>You won the toss!</b><br>You pick first.':`<b>${esc(nm(first))} won the toss.</b><br>They pick first, you pick second.`;t.classList.add('show')},2300);
+  setTimeout(()=>{if(S.view==='flip'){S.flipDone=true;S.turn=me;go('draft')}},4300);
+}
+
 function viewWait(){
   const o=S.online,st=o.state||{},f=S.fixture,other=st.players&&st.players[1-o.slot];
   const url=shareUrl(o.code);
-  const msg=`⚽ Duel me on ${TEAMS[f.home].name} vs ${TEAMS[f.away].name}! Pick your 2 players here: ${url}`;
+  const msg=`⚽ Duel me on ${TEAMS[f.home].name} vs ${TEAMS[f.away].name}! Join here and we draft our players: ${url}`;
   app.innerHTML=`<section class="screen">
-    <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${esc(TEAMS[f.home].short)} vs ${esc(TEAMS[f.away].short)} · Online duel</div><h2>Your picks are locked</h2></div></div>
-    <div class="duel" style="grid-template-columns:1fr"><div class="side"><div class="sh"><div class="who">${esc(pname(o.slot))}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${S.picks[o.slot].map((id,k)=>`<div class="sc ${CAPTAIN&&(S.capt[o.slot]||0)===k?'cap':''}">${CAPTAIN&&(S.capt[o.slot]||0)===k?'<span class="cb">C</span>':''}${shirt(id)}<b class="nm">${esc(PL[id].name)}</b><span class="sub">${PL[id].pos||'–'} · ${esc(TEAMS[PL[id].team].short)}</span></div>`).join('')}</div></div></div>
+    <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${esc(TEAMS[f.home].short)} vs ${esc(TEAMS[f.away].short)} · Online duel</div><h2>${S.picks[o.slot]&&S.picks[o.slot].length?'Your picks are locked':'Invite your friend'}</h2></div></div>
+    ${S.picks[o.slot]&&S.picks[o.slot].length?'':`<div class="fixture" style="cursor:default"><div class="comp"><span>${esc(f.comp||'')}</span><span>${f.kickoff?new Date(f.kickoff).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'}):''}</span></div><div class="team">${crest(f.home)}<b>${esc(TEAMS[f.home].name)}</b></div><div class="vs">VS</div><div class="team">${crest(f.away)}<b>${esc(TEAMS[f.away].name)}</b></div></div>`}
+    <div ${S.picks[o.slot]&&S.picks[o.slot].length?'':'hidden'} class="duel" style="grid-template-columns:1fr"><div class="side"><div class="sh"><div class="who">${esc(pname(o.slot))}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${S.picks[o.slot].map((id,k)=>`<div class="sc ${CAPTAIN&&(S.capt[o.slot]||0)===k?'cap':''}">${CAPTAIN&&(S.capt[o.slot]||0)===k?'<span class="cb">C</span>':''}${shirt(id)}<b class="nm">${esc(PL[id].name)}</b><span class="sub">${PL[id].pos||'–'} · ${esc(TEAMS[PL[id].team].short)}</span></div>`).join('')}</div></div></div>
     ${o.slot===0&&!other?`<div class="invite">
       <b>Send this link to your friend</b>
       <input id="ilink" readonly value="${esc(url)}">
       <div class="dchips"><button class="btn" id="ishare" style="padding:12px">Share invite</button><button class="btn ghost" id="icopy" style="padding:12px">Copy link</button></div>
-      <span class="small muted">They open it, pick their 2 players, and the duel starts on both phones.</span>
+      <span class="small muted">When they join, a coin flip decides who picks first. Then you take turns: one player each, twice. No one can pick the same player.</span>
     </div>`:''}
     <div class="note" style="text-align:center"><div class="spin"></div><p style="margin:8px 0 0">${other?`<b>${esc(other.name)}</b> joined and is picking players…`:'Waiting for your friend to join…'}</p></div>
   </section>`;
@@ -1063,6 +1169,8 @@ async function openOnline(code){
     try{const st=await onlineFetch({get:{code,token:saved.token}});applyOnline(st);
       S.fixture=st.fx;
       const me=st.players[saved.slot];
+      if(!st.both&&!st.draft&&saved.slot===0&&!(me&&me.ready)){S.dares=['',''];S.dareOk=[false,false];go('wait');startSync(2500);return}
+      if(st.draft&&!st.both){S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;S.flipDone=true;go('draft');startSync(2500);loadPlayers(S.fixture);return}
       if(!me||!me.ready){S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;go('draft');loadPlayers(S.fixture);return}
       if(!st.both){go('wait');startSync(4000);return}
       const started=LIVE.has(st.fx.status)||Date.now()>Date.parse(st.fx.kickoff);
@@ -1099,11 +1207,12 @@ function viewJoin(){
     const name=document.getElementById('jname').value.trim()||'Player 2';
     const nm=store.get('fld.names',['You','Friend']);nm[0]=name;store.set('fld.names',nm);
     jg.disabled=true;jg.textContent='Joining…';
-    try{const pr=await ensureProfile(name);const b=await onlineFetch({body:{action:'join',code:S.joinCode,name,pid:pr&&pr.id,ptok:pr&&pr.token}});
+    try{const pr=await ensureProfile(name);const b=await onlineFetch({body:{action:'join',code:S.joinCode,name,draft:true,pid:pr&&pr.id,ptok:pr&&pr.token}});
       S.online={code:S.joinCode,token:b.token,slot:1};applyOnline(b.state);
       store.set('fld.online',{code:S.joinCode,token:b.token,slot:1,title:`${TEAMS[b.state.fx.home].name} vs ${TEAMS[b.state.fx.away].name}`});
       history.replaceState(null,'',location.pathname);
-      S.joining=true;startDuel(b.state.fx);
+      S.fixture=b.state.fx;S.dares=['',''];S.dareOk=[false,false];S.eng=null;S.filter='all';S.turn=1;
+      if(b.state.draft){go('flip');startSync(2500);loadPlayers(S.fixture)}else{S.joining=true;startDuel(b.state.fx)}
     }catch(e){toast(e.message);jg.disabled=false;jg.textContent='Accept the duel'}
   };
 }
