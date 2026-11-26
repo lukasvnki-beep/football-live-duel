@@ -414,7 +414,38 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .invite{background:var(--panel);border:1px solid var(--accent);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .invite input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text);font:inherit;font-size:.85rem;width:100%}
 .invite .dchips .btn{flex:1}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* Moments */
+.fx{position:fixed;inset:0;z-index:30;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden;animation:fxbg 1.8s ease-out forwards}
+.fx-goal{animation-duration:2.4s;background:radial-gradient(circle at 50% 45%,rgba(100,239,176,.35),transparent 65%)}
+.fx-goal.bad{background:radial-gradient(circle at 50% 45%,rgba(255,107,107,.3),transparent 65%)}
+.fx-big{font-family:var(--display);font-weight:900;font-size:clamp(3.5rem,18vw,7rem);line-height:1;color:#fff;text-shadow:0 6px 30px rgba(0,0,0,.5);animation:fxin .55s cubic-bezier(.2,1.6,.4,1) both}
+.fx-goal .fx-big{color:var(--accent);letter-spacing:2px}
+.fx-goal.bad .fx-big{color:var(--red)}
+.fx-sub{font-weight:800;background:var(--panel2);border-radius:999px;padding:6px 14px;max-width:86vw;text-align:center;animation:fxin .5s .15s ease-out both}
+.fx-power.double{background:radial-gradient(circle,rgba(255,215,124,.35),transparent 60%)}
+.fx-power.neg{background:radial-gradient(circle,rgba(255,107,107,.35),transparent 60%)}
+.fx-power.shield{background:radial-gradient(circle,rgba(111,182,255,.35),transparent 60%)}
+.fx-power .fx-big{font-size:clamp(5rem,26vw,9rem);animation:fxpow .9s cubic-bezier(.2,1.4,.4,1) both}
+.fx-f10{background:radial-gradient(circle,rgba(255,120,60,.4),transparent 65%)}
+.fx-f10 .fx-big{color:#ffb347;font-size:clamp(2.6rem,13vw,5rem)}
+.conf{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:conf 1.9s ease-in forwards}
+@keyframes fxbg{0%{opacity:0}10%{opacity:1}75%{opacity:1}100%{opacity:0}}
+@keyframes fxin{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes fxpow{0%{opacity:0;transform:scale(.2) rotate(-25deg)}60%{opacity:1;transform:scale(1.2) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes conf{to{transform:translate(var(--dx),105vh) rotate(720deg)}}
+.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.f10{text-align:center;font-family:var(--display);font-weight:900;letter-spacing:1px;padding:9px 12px;border-radius:14px;color:#2a1000;background:linear-gradient(90deg,#ff7a3c,#ffd77c,#ff7a3c);background-size:200% 100%;animation:f10 2s linear infinite;box-shadow:0 0 22px rgba(255,140,60,.45)}
+@keyframes f10{to{background-position:-200% 0}}
+/* Badges */
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.badge{background:var(--panel);border:1px solid var(--line,rgba(255,255,255,.08));border-radius:16px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;gap:3px;align-items:center}
+.badge .bi{font-size:1.8rem;line-height:1}
+.badge b{font-size:.78rem}
+.badge small{font-size:.66rem;color:var(--muted);line-height:1.2}
+.badge.off{opacity:.38;filter:grayscale(1)}
+.badge.on{border-color:var(--gold);box-shadow:0 0 14px rgba(255,215,124,.18)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.fx{display:none}}
 </style>
 
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
@@ -832,18 +863,18 @@ function pbar(){
   const pills=i=>act.filter(x=>x.p.owner===i&&!blk.has(x.p)&&!blk.shields.has(x.p)).map(x=>{const P=POWER[x.p.type];
     return `<div class="pill ${x.p.type}"><b>${P.icon} ${P.label}</b>${x.p.target?esc(PL[x.p.target].name)+' · ':''}${x.left}′<div class="bar"><i style="width:${Math.round(100*x.left/P.dur)}%"></i></div></div>`}).join('');
   const mine=S.mode==='friend'?S.powers.length:S.powers.filter(p=>p.owner===L).length,max=S.mode==='friend'?6:3;
-  return `<div class="pbar"><div class="pact">${pills(L)}</div><button class="pbtn" id="pwopen" ${E.final?'disabled':''}><span class="i">⚡</span><span>Power-ups</span><small>${mine}/${max} used</small></button><div class="pact r">${pills(R)}</div></div>`;
+  return `<div class="pbar"><div class="pact">${pills(L)}</div><button class="pbtn" id="pwopen" ${E.final||inF10(E)?'disabled':''}><span class="i">${inF10(E)?'🔒':'⚡'}</span><span>Power-ups</span><small>${inF10(E)?'Locked':mine+'/'+max+' used'}</small></button><div class="pact r">${pills(R)}</div></div>`;
 }
 function powersSheet(){
-  const E=S.eng,now=nowMin(E),ok=inPlay(E);
+  const E=S.eng,now=nowMin(E),lock=inF10(E),ok=inPlay(E)&&!lock;
   const sides=[0,1].filter(canControl);
   return sides.map(i=>`<div class="pw"><h3>${esc(pname(i))}</h3><div class="pwrow">${PTYPES.map(type=>{
       const used=S.powers.find(p=>p.owner===i&&p.type===type),P=POWER[type];
       const left=used?used.from+P.dur-now:0,on=used&&left>0;
-      const state=used?(on?`Active · ${left}′ left`:'Used'):ok?'Tap to use':'Wait for play';
+      const state=used?(on?`Active · ${left}′ left`:'Used'):lock?'Locked in the final 10′':ok?'Tap to use':'Wait for play';
       return `<button class="pwb ${type} ${on?'on':''}" data-pw="${i}:${type}" ${used||!ok?'disabled':''}><b>${P.icon} ${P.label}</b><span>${P.desc}</span><span class="st">${state}</span></button>`}).join('')}</div>
     ${S.pwPick&&S.pwPick.owner===i?`<div class="pwpick"><span>${S.pwPick.type==='double'?'Double the points of which of your players?':'Flip the points of which of their players?'}</span><div class="tlist">${current(S.pwPick.type==='double'?i:1-i).map(id=>`<button data-pwt="${id}">${shirt(id)}<span><b>${esc(PL[id].name)}</b> <small>${esc(TEAMS[PL[id].team].short)}</small></span></button>`).join('')}</div><button class="linkbtn" data-pwx="1">Cancel</button></div>`:''}
-  </div>`).join('')+`<p class="small muted" style="margin:0">Each power-up works once per match. Timing is in match minutes.</p>`;
+  </div>`).join('')+`<p class="small muted" style="margin:0">Each power-up works once per match, and not from the 80th minute. Timing is in match minutes.</p>`;
 }
 function swapSheet(owner,k){
   const out=current(owner)[k],pool=swapPool(owner);
@@ -873,7 +904,7 @@ const DARES=['Buys the next kebab','Wears my team\'s shirt tomorrow','Posts the 
 const POWER={double:{dur:10,label:'Double Points',icon:'⚡',desc:'One of your players scores ×2 for 10 min'},neg:{dur:5,label:'Negative Points',icon:'☠',desc:'One of their players scores minus for 5 min'},shield:{dur:15,label:'Shield',icon:'🛡',desc:'Blocks the next Negative Points used on you in the next 15 min'}};
 const PTYPES=['double','neg','shield'];
 const CAPTAIN=false; // Lukas: no captain for now
-function resetPowers(){S.powers=[];S.swaps=[];S.pwPick=null;S.pwFeed=[];const r=(a,b)=>a+Math.floor(Math.random()*(b-a));S.cpuPlan={double:r(12,70),neg:r(15,78),shield:r(10,60)}}
+function resetPowers(){S.powers=[];S.swaps=[];S.htTot=null;S.f10Seen=false;S.pwPick=null;S.pwFeed=[];const r=(a,b)=>a+Math.floor(Math.random()*(b-a));S.cpuPlan={double:r(12,70),neg:r(15,78),shield:r(10,60)}}
 resetPowers();
 function nowMin(E){if(E.kind==='sim')return E.cursor+1;if(E.replay&&!E.final)return E.cursor;return E.elapsed||0}
 function inPlay(E){
@@ -886,11 +917,11 @@ function inPlay(E){
 function activePowers(){const E=S.eng;if(!E||E.final)return [];const now=nowMin(E);
   return S.powers.map(p=>({p,left:p.from+POWER[p.type].dur-now})).filter(x=>x.left>0)}
 function activatePower(owner,type,target){
-  const E=S.eng;if(!inPlay(E)||S.powers.some(p=>p.owner===owner&&p.type===type))return;
+  const E=S.eng;if(!inPlay(E)||inF10(E)||S.powers.some(p=>p.owner===owner&&p.type===type))return;
   const shown=E.shown();const from=nowMin(E);
   const ord=Math.max(from,...shown.map(e=>e.ord||0),...S.powers.map(p=>p.ord||0))+0.0001;
   const pw={owner,type,target:type==='shield'?null:target,from,ord,lbl:E.clock().min,seen:shown.map(e=>e.ord)};
-  S.powers.push(pw);rebuildPwFeed();
+  S.powers.push(pw);rebuildPwFeed();fx('power',{type,owner,target:pw.target});
   if(S.mode==='online'){onlinePost({action:'power',type,target:pw.target,from,ord,lbl:pw.lbl,seen:pw.seen}).catch(e=>{S.powers=S.powers.filter(x=>x!==pw);rebuildPwFeed();toast(e.message);updateLive()})}
   else if(E.kind==='real'&&!E.replay)saveActive();
 }
@@ -937,6 +968,17 @@ function cpuPowers(){
     activatePower(1,type,t.id);
   });
 }
+// ================= Final 10' =================
+// From the 80th minute every point counts double, and no power-up can be started any more.
+const F10=80;
+const matchMin=e=>e.min!=null?e.min:(e.el||0);
+function nowMatchMin(E){if(!E)return 0;if(E.kind==='sim')return E.minAt(Math.max(0,E.cursor));return nowMin(E)}
+function inF10(E){return E&&!E.final&&nowMatchMin(E)>=F10&&inPlay(E)}
+function f10Bonus(i){const E=S.eng;if(!E||!E.shown)return 0;let v=0;
+  E.shown().forEach(e=>{if(e.type==='power'||e.type==='swap')return;const p=sideEvPts(i,e);if(!p)return;
+    if(e.spread){v+=Math.round(p*Math.max(0,(E.maxMin||90)-F10)/(E.maxMin||90))}else if(matchMin(e)>=F10)v+=p});
+  return v}
+
 // ================= Slots: who scores for each side over time =================
 // Each side has 2 slots. A slot changes hands when its player is subbed off (the player coming on takes over)
 // or when its owner uses the one swap per game. Each spell in a slot is a "seg".
@@ -979,7 +1021,8 @@ function sideScore(i,t,a){
   let total=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,id)=>x+adjOf(id),0);
   const ck=CAPTAIN&&S.capt?S.capt[i]:null;let cap=0;
   if(ck!=null){const cs=rows.filter(r=>r.k===ck);const base=cs.reduce((x,r)=>x+r.pts,0)+[...new Set(cs.map(r=>r.id))].reduce((x,id)=>x+adjOf(id),0);cap=Math.round(base*0.5)}
-  return {rows,adjOf,cap,total:total+cap};
+  const f10=f10Bonus(i);
+  return {rows,adjOf,cap,f10,total:total+cap+f10};
 }
 function sideEvPts(i,e){if(!e.pts)return 0;return segsOf(i).reduce((x,g)=>x+(e.pts[g.id]&&segHas(g,e)?e.pts[g.id]:0),0)}
 function swapUsed(i){return (S.swaps||[]).some(w=>w.owner===i)}
@@ -1042,12 +1085,12 @@ function viewReveal(){
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
   store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,capt:S.capt,swaps:S.swaps,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,capt:S.capt,swaps:S.swaps,htTot:S.htTot,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
   Object.assign(TEAMS,a.teams);a.players.forEach(p=>{if(!PL[p.id])PL[p.id]=p});
-  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];S.capt=a.capt||[0,0];S.swaps=a.swaps||[];rebuildPwFeed();
+  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];S.capt=a.capt||[0,0];S.swaps=a.swaps||[];S.htTot=a.htTot||null;rebuildPwFeed();
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status)&&!a.start,a.start);go('live');S.eng.start();
@@ -1234,6 +1277,17 @@ function gotChat(list){
   const m=fresh[fresh.length-1],who=pname(m.s);
   if(m.e)burst(m.t,who);else toast(`💬 ${who}: ${m.t.slice(0,60)}`);
 }
+// Full-screen moments: goals, power-ups, Final 10'
+function fx(kind,o){o=o||{};if(S.view!=='live')return;
+  const d=document.createElement('div');d.className='fx fx-'+kind+(o.type?' '+o.type:'')+(o.bad?' bad':'');d.setAttribute('aria-hidden','true');
+  const big=document.createElement('div');big.className='fx-big';const sub=document.createElement('div');sub.className='fx-sub';
+  if(kind==='goal'){big.textContent='GOAL!';sub.textContent=o.text||'';
+    for(let n=0;n<26;n++){const c=document.createElement('i');c.className='conf';c.style.left=(Math.random()*100)+'%';c.style.background=['var(--accent)','var(--gold)','#fff','#6fb6ff'][n%4];c.style.animationDelay=(Math.random()*.35)+'s';c.style.setProperty('--dx',(Math.random()*120-60)+'px');d.appendChild(c)}}
+  else if(kind==='power'){const P=POWER[o.type];big.textContent=P.icon;sub.textContent=`${pname(o.owner)} · ${P.label}${o.target&&PL[o.target]?' on '+PL[o.target].name:''}`}
+  else if(kind==='f10'){big.textContent='🔥 FINAL 10′';sub.textContent='Every point ×2 · power-ups locked'}
+  d.prepend(big);d.appendChild(sub);document.body.appendChild(d);setTimeout(()=>d.remove(),kind==='goal'?2400:1800);
+  if(kind==='goal'||kind==='f10'){const a=document.getElementById('app');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake')}
+}
 function burst(emoji,who){const d=document.createElement('div');d.className='burst';d.textContent=emoji;const l=document.createElement('span');l.textContent=who;d.appendChild(l);document.body.appendChild(d);setTimeout(()=>d.remove(),1700)}
 function chatUI(){
   let fab=document.getElementById('chatfab');
@@ -1312,8 +1366,8 @@ function simEngine(f){
       sentOff.add(pl.id);events.push({idx,lbl,type:'red',team,player:pl.id,pts:{[pl.id]:POINTS.red}});
     }
   });
-  events.forEach((e,i)=>{e.el=e.idx+1;e.ord=e.idx+1+i/10000});
-  const E={kind:'sim',cursor:-1,htWait:0,done:false,sentOff:new Set(),
+  events.forEach((e,i)=>{e.el=e.idx+1;e.ord=e.idx+1+i/10000;const mm=minutes[e.idx];if(mm){e.min=mm.m;e.half=mm.half}});
+  const E={kind:'sim',cursor:-1,htWait:0,done:false,sentOff:new Set(),minAt:i=>minutes[i]?minutes[i].m:90,
     shown(){return events.filter(e=>e.idx<=E.cursor)},
     clock(){const ht=E.cursor===45+st1-1&&E.htWait>0;return {min:E.cursor<0?'0′':minutes[E.cursor]?label(minutes[E.cursor].half,minutes[E.cursor].m):'FT',status:S.paused?'Paused':ht?'Half time':E.cursor<0?'Kickoff':E.cursor<=45+st1-1?'1st half':'2nd half',live:!S.paused&&!ht}},
     tally(){const pp={};let hs=0,as=0;E.shown().forEach(e=>{for(const k in e.pts)pp[k]=(pp[k]||0)+e.pts[k];if(e.type==='goal'||e.type==='og'){e.team===f.home?hs++:as++}if(e.type==='var'){e.team===f.home?hs--:as--}});return {pp,hs,as}},
@@ -1492,7 +1546,9 @@ function finishDuel(){
   const out=tot[me]>tot[1-me]?'W':tot[me]<tot[1-me]?'L':'D';
   if(S.online){store.del('fld.online');if(S.syncT){clearInterval(S.syncT);S.syncT=null}
     onlineFetch({body:{action:'final',code:S.online.code,token:S.online.token,tot}}).then(()=>{S.league=null}).catch(()=>{})}
-  S.history.unshift({at:Date.now(),names:[pname(me),pname(1-me)],tot:[tot[me],tot[1-me]],score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real'});
+  const a=powerAdjust(),pwGain=S.powers.reduce((x,p,k)=>x+(p.owner===me?(a.per[k]||0)*(p.type==='neg'?-1:1):0),0);
+  S.history.unshift({at:Date.now(),names:[pname(me),pname(1-me)],tot:[tot[me],tot[1-me]],score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real',online:S.mode==='online',
+    comeback:!!(S.htTot&&S.htTot[me]<S.htTot[1-me]&&out==='W'),pwGain,swap:swapUsed(me)});
   S.history=S.history.slice(0,30);store.set('fld.history',S.history);
   if(f.kind==='real')store.del('fld.active');
   go('result');
@@ -1526,6 +1582,7 @@ function viewLive(){
   app.innerHTML=`<section class="screen">
     <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${E.kind==='sim'?'Practice match':S.mode==='online'?'Online duel':'Duel'}${S.preview&&E.kind==='real'?' · preview (fake match)':''}</div></div></div>
     <div id="mstrip"></div>
+    <div id="banner"></div>
     <div id="board"></div>
     <div id="pbar"></div>
     ${timed?`<div class="controls">
@@ -1576,12 +1633,16 @@ function updateLive(before){
   document.getElementById('board').innerHTML=duelPanel(true);
   if(before){const [L,R]=SIDES();[L,R].forEach((i,n)=>{if(before[i]!==tot[i]){const el=document.querySelectorAll('.duel .tot')[n];if(el)el.classList.add('bump')}})}
   document.getElementById('pbar').innerHTML=pbar();
+  // Half-time totals (for the comeback badge), Final 10' banner
+  if(!S.htTot&&nowMatchMin(E)>=46)S.htTot=tot.slice();
+  const f10=inF10(E);if(f10&&!S.f10Seen){S.f10Seen=true;buzz([100,50,100]);fx('f10');toast('🔥 Final 10 minutes: every point counts ×2, power-ups are locked')}
+  document.getElementById('banner').innerHTML=f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':'';
   drawSheet();
   const eb=document.getElementById('errbox');
   eb.innerHTML=E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'';
   const [L,R]=SIDES();
   const ev=[...E.shown(),...S.pwFeed].sort((x,y)=>y.ord-x.ord);
-  const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e);const [h,w]=evShort(e,i);
+  const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*(!e.spread&&matchMin(e)>=F10?2:1);const [h,w]=evShort(e,i);
     return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
   document.getElementById('feed').innerHTML=ev.length?ev.map(e=>{
     let on=[0,1].map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
@@ -1607,6 +1668,7 @@ function viewResult(){
     if(g.how==='sub')why.unshift(`came on ${g.fromLbl}`);if(g.how==='swap')why.unshift(`swapped in at ${g.fromLbl}`);
     if(g.endHow==='sub')why.push(`subbed off ${g.to}`);if(g.endHow==='swap')why.push(`swapped out at ${g.to}`);
     return `<div class="brow"><span>${CAPTAIN&&(S.capt[i]||0)===g.k?'Ⓒ ':''}${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${g.pts+adj}</b><span class="why">${why.length?esc(why.join(' · ')):'No scoring events'}</span></div>`}).join('')
+    +(sc[i].f10?`<div class="brow pwr"><span>🔥 Final 10′ (×2)</span><b class="num">${sign(sc[i].f10)}</b><span class="why">Points scored from the 80th minute count double</span></div>`:'')
     +(sc[i].cap?`<div class="brow pwr"><span>Ⓒ Captain bonus (×1.5)</span><b class="num">${sign(sc[i].cap)}</b><span class="why">Half of the captain's points added on top</span></div>`:'')
     +S.powers.map((p,k)=>p.owner!==i?'':`<div class="brow pwr"><span>${POWER[p.type].icon} ${POWER[p.type].label}${p.target?' on '+esc(PL[p.target].name):''}</span><b class="num">${a.per[k]?sign(a.per[k]):'0'}</b><span class="why">Used at ${p.from}′ for ${POWER[p.type].dur} min${p.type==='neg'?(blockedNegs().has(p)?', blocked by a Shield':`, changed ${pname(1-i)==='You'?'your':esc(pname(1-i))+'\'s'} score`):''}</span></div>`).join('');
   app.innerHTML=`<section class="screen">
@@ -1640,6 +1702,7 @@ function viewResult(){
 function viewRules(){
   app.innerHTML=`<section class="screen"><div><div class="eyebrow">Rules</div><h2 style="font-size:2.4rem;text-transform:uppercase">How to play</h2></div>
     <div class="steps"><div><b>1</b><span>Pick a real match and choose 2 players. Your friend picks theirs.</span></div><div><b>2</b><span>Follow the match live. Every pass, shot, tackle and goal scores points.</span></div><div><b>3</b><span>Use power-ups and your swap at the right moment. Highest score wins.</span></div></div>
+    <div class="note"><b>🔥 Final 10′.</b> From the 80th minute every point counts double, and power-ups can no longer be used. Your swap still works.</div>
     <div class="rules">
       <h3>How points work</h3>
       <div class="ptable">
@@ -1701,6 +1764,7 @@ async function loadLeague(){
   S.leagueLoading=false;
   const part={profile:'card',friends:'friends',ranking:'top'}[S.view];
   if(part){const el=document.getElementById('league');if(el){el.innerHTML=leagueHtml(part);bindLeague()}}
+  const bd=document.getElementById('badges');if(bd&&S.view==='profile')bd.innerHTML=badgesHtml();
 }
 function leagueHtml(part){
   const me=store.get('fld.me',null),L=S.league;
@@ -1760,8 +1824,9 @@ function reactToFeed(){
   const seen=S.reactSeen||(S.reactSeen=new Set());const first=!S.reactInit;S.reactInit=true;
   const me=S.mode==='online'&&S.online?S.online.slot:0;
   [...E.shown(),...S.pwFeed].forEach(e=>{const k=evKey(e)+'|'+(e.ptype||'')+(e.owner??'');if(seen.has(k))return;seen.add(k);if(first)return;
-    if(e.type==='goal'){const v=sideEvPts(me,e),o=sideEvPts(1-me,e);goalSound();buzz(v>0?[80,60,160]:o>0?[40]:[30]);if(v>0)burst('⚽','+'+v)}
-    else if(e.type==='power'&&e.owner!==me){buzz([60,40,60]);toast(`${POWER[e.ptype].icon} ${pname(e.owner)} used ${POWER[e.ptype].label}`)}});
+    if(e.type==='goal'){const x2=!e.spread&&matchMin(e)>=F10?2:1,v=sideEvPts(me,e)*x2,o=sideEvPts(1-me,e)*x2;goalSound();buzz(v>0?[80,60,160]:o>0?[40]:[30]);
+      fx('goal',{text:(PL[e.player]?PL[e.player].name:'')+(v>0?` · +${v} for ${pname(me)==='You'?'you':pname(me)}`:o>0?` · +${o} for ${pname(1-me)}`:''),bad:o>0&&!(v>0)})}
+    else if(e.type==='power'&&e.owner!==me&&S.mode==='online'){buzz([60,40,60]);fx('power',{type:e.ptype,owner:e.owner,target:e.player})}});
 }
 function hideSplash(){const sp=document.getElementById('splash');if(!sp||sp.classList.contains('out'))return;sp.classList.add('out');setTimeout(()=>sp.remove(),600)}
 const OB=[
@@ -1850,12 +1915,29 @@ async function shareCard(btn){
 function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
 
 // ================= Profile =================
+const BADGES=[
+  {i:'🎉',n:'First win',d:'Win a duel',ok:(h)=>h.some(x=>x.out==='W')},
+  {i:'↩️',n:'Comeback king',d:'Win after trailing at half time',ok:h=>h.some(x=>x.comeback)},
+  {i:'⚡',n:'Power-up master',d:'Gain 50+ pts from power-ups in one duel',ok:h=>h.some(x=>(x.pwGain||0)>=50)},
+  {i:'🔥',n:'On fire',d:'Win 3 in a row',ok:(h,me)=>streakMax(h)>=3||(me&&me.best>=3)},
+  {i:'👑',n:'Unstoppable',d:'Win 5 in a row',ok:(h,me)=>streakMax(h)>=5||(me&&me.best>=5)},
+  {i:'🧹',n:'Clean sweep',d:'Win by 100+ pts',ok:h=>h.some(x=>x.out==='W'&&x.tot[0]-x.tot[1]>=100)},
+  {i:'🎯',n:'No swap needed',d:'Win a real match without swapping',ok:h=>h.some(x=>x.out==='W'&&x.real&&x.swap===false)},
+  {i:'📱',n:'Online',d:'Play a duel on two phones',ok:h=>h.some(x=>x.online)},
+  {i:'🤝',n:'Social',d:'Have 3 friends',ok:(h,me,fr)=>fr>=3},
+  {i:'🏟️',n:'Regular',d:'Play 10 duels',ok:h=>h.length>=10}];
+function streakMax(h){let m=0,c=0;[...h].reverse().forEach(x=>{c=x.out==='W'?c+1:0;m=Math.max(m,c)});return m}
+function badgesHtml(){const L=S.league,me=L&&L.me,fr=L&&L.friends?L.friends.filter(x=>x&&(!me||x.id!==me.id)).length:0,h=S.history;
+  const got=BADGES.map(b=>!!b.ok(h,me,fr)),n=got.filter(Boolean).length;
+  return `<div class="section-title"><h2 style="font-size:1.2rem">Badges</h2><span class="small muted">${n}/${BADGES.length} unlocked</span></div>
+    <div class="badges">${BADGES.map((b,k)=>`<div class="badge ${got[k]?'on':'off'}"><span class="bi">${b.i}</span><b>${b.n}</b><small>${b.d}</small></div>`).join('')}</div>`}
 function viewProfile(){
   const h=S.history;const c={W:0,D:0,L:0};h.forEach(x=>c[x.out]++);
   app.innerHTML=`<section class="screen">
     <div><div class="eyebrow">Profile</div><h2 style="font-size:2.4rem;text-transform:uppercase">${esc(S.names[0]||'You')}</h2></div>
     <div class="record"><div><b class="num" style="color:var(--accent)">${c.W}</b><span>Won</span></div><div><b class="num">${c.D}</b><span>Drawn</span></div><div><b class="num" style="color:var(--red)">${c.L}</b><span>Lost</span></div></div>
     <div id="league">${leagueHtml('card')}</div>
+    <div id="badges">${badgesHtml()}</div>
     <div class="lg"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="snd" ${store.get('fld.sound',true)?'checked':''}> Goal sound</label><label class="toggle"><input type="checkbox" id="vib" ${store.get('fld.vib',true)?'checked':''}> Vibrate on goals and power-ups</label><button class="linkbtn" id="rename" style="text-align:left;padding:0">Change your player name</button></div>
     <div class="section-title"><h2 style="font-size:1.2rem">Recent duels</h2><span class="small muted">Saved on this phone</span></div>
     <div class="hist">${h.length?h.map(x=>{const tm=x.teams||['',''];return `<div class="hrow"><span class="res ${x.out}">${x.out}</span>
