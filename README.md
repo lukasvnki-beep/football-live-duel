@@ -18,3 +18,7 @@ Goal +10 · Assist +7 · Shot on target +2 · Tackle +1 · Every 10 completed pa
 ## Data
 
 Live events and player stats come from API-Football. They poll about once a minute and are cached for 55 seconds, so several phones watching the same match share one request. The free API plan allows 100 requests a day.
+
+## Accounts
+
+Players sign in with a 6-digit code sent by email (`api/account.js`). Codes are sent from a Gmail account with an app password, set in Vercel as `GMAIL_USER` and `GMAIL_APP_PASSWORD`. Google sign-in turns on when `GOOGLE_CLIENT_ID` is set. The privacy policy is at `/privacy.html`; "Delete my account" on the Profile tab erases the account for good.
