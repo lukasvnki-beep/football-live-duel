@@ -1476,13 +1476,13 @@ function viewWait(){
     ${S.picks[o.slot]&&S.picks[o.slot].length?'':`<div class="fixture" style="cursor:default"><div class="comp"><span>${esc(f.comp||'')}</span><span>${f.kickoff?new Date(f.kickoff).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'}):''}</span></div><div class="team">${crest(f.home)}<b>${esc(TEAMS[f.home].name)}</b></div><div class="vs">VS</div><div class="team">${crest(f.away)}<b>${esc(TEAMS[f.away].name)}</b></div></div>`}
     <div ${S.picks[o.slot]&&S.picks[o.slot].length?'':'hidden'} class="duel" style="grid-template-columns:1fr"><div class="side"><div class="sh"><div class="who">${esc(pname(o.slot))}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${S.picks[o.slot].map((id,k)=>`<div class="sc ${CAPTAIN&&(S.capt[o.slot]||0)===k?'cap':''}">${CAPTAIN&&(S.capt[o.slot]||0)===k?'<span class="cb">C</span>':''}${shirt(id)}<b class="nm">${esc(PL[id].name)}</b><span class="sub">${PL[id].pos||'–'} · ${esc(TEAMS[PL[id].team].short)}</span></div>`).join('')}</div></div></div>
     ${(o.slot===0||mx>2)&&!full?`<div class="invite">
-      <b>${mx>2?`Send this link to your friends (${joined}/${mx} joined)`:'Send this link to your friend'}</b>
+      <b>${mx>2?`<span>Send this link to your friends</span> (${joined}/${mx})`:'Send this link to your friend'}</b>
       <input id="ilink" readonly value="${esc(url)}">
       <a class="btn wa" id="iwa" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">💬 Send on WhatsApp</a>
       <div class="dchips"><button class="btn ghost" id="ishare" style="padding:12px">Other apps</button><button class="btn ghost" id="icopy" style="padding:12px">Copy link</button></div>
-      <span class="small muted">When they join, a coin flip decides who picks first. Then you take turns: one player each, twice. No one can pick the same player.</span>
+      ${mx>2?'<span class="small muted">When everyone has joined, the draft order is drawn at random. Then you pick in a snake: 1-2-3-4, then 4-3-2-1.</span>':''}<span class="small muted" ${mx>2?'hidden':''}>When they join, a coin flip decides who picks first. Then you take turns: one player each, twice. No one can pick the same player.</span>
     </div>`:''}
-    <div class="note" style="text-align:center"><div class="spin"></div><p style="margin:8px 0 0">${mx>2&&!full?`Waiting for players: ${joined}/${mx}`:other?`<b>${esc(other.name)}</b> joined and is picking players…`:'Waiting for your friend to join…'}</p></div>
+    <div class="note" style="text-align:center"><div class="spin"></div><p style="margin:8px 0 0">${mx>2&&!full?`<span>Waiting for players</span> ${joined}/${mx}`:other?`<b>${esc(other.name)}</b> joined and is picking players…`:'Waiting for your friend to join…'}</p></div>
   </section>`;
   document.getElementById('back').onclick=()=>go('home');
   const sh=document.getElementById('ishare');
