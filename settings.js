@@ -203,6 +203,17 @@ No players available.|Aucun joueur disponible.|No hay jugadores disponibles.
 Take|Sortir|Saca a
 out. Points he already earned stay; the new player only scores from now. One swap per match.|. Ses points déjà gagnés restent ; le nouveau joueur marque à partir de maintenant. Un échange par match.|. Sus puntos ya ganados se quedan; el nuevo jugador puntúa desde ahora. Un cambio por partido.
 ⇄ Swap a player|⇄ Échanger un joueur|⇄ Cambiar un jugador
+out. Points already earned stay; the new player only scores from now. One trade per match, and you keep seeing what|. Les points déjà gagnés restent ; le nouveau joueur marque à partir de maintenant. Un seul échange par match, et tu continues de voir ce que|. Los puntos ya ganados se quedan; el nuevo jugador puntúa desde ahora. Un cambio por partido, y sigues viendo lo que
+scores after.|marque ensuite.|puntúa después.
+⇄ Trade a player|⇄ Échanger un joueur|⇄ Cambiar un jugador
+Trade|Échanger|Cambiar
+Trade used|Échange utilisé|Cambio usado
+Traded|Échangé|Cambiado
+⇄ Trade|⇄ Échange|⇄ Cambio
+since|depuis|desde
+since the trade|depuis l’échange|desde el cambio
+Feed|Direct|Directo
+Select|Choisir|Elegir
 ⚡ Power-ups|⚡ Bonus|⚡ Poderes
 Buys the next kebab|Paie le prochain kebab|Paga el próximo kebab
 Wears my team's shirt tomorrow|Porte le maillot de mon équipe demain|Lleva la camiseta de mi equipo mañana
