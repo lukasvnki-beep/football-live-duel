@@ -293,18 +293,18 @@ export default async function handler(req, res) {
       const start = { el: Math.max(0, Math.min(130, Number(s.el) || 0)), keys: (Array.isArray(s.keys) ? s.keys : []).slice(0, 200).map(x => clean(x, 60)), base };
       await redis([['SET', k + ':start', JSON.stringify(start), 'EX', String(TTL), 'NX']]);
     } else if (b.action === 'power') {
-      // Power-ups (double, shield) and the one player swap per game share this list
-      const type = ['double', 'shield', 'swap'].includes(b.type) ? b.type : null;
+      // Power-ups (double, shield, passer, wall, shot) and the one player swap per game share this list
+      const type = ['double', 'shield', 'passer', 'wall', 'shot', 'swap'].includes(b.type) ? b.type : null;
       if (!type) return res.status(400).json({ error: 'Unknown power-up.' });
       if (d.powers.some(p => p.owner === slot && p.type === type)) return res.status(409).json({ error: 'Already used.' });
       // Final 10': no new power-ups from the 80th minute (the swap stays allowed)
       if (type !== 'swap' && Number(b.from) >= 80) return res.status(409).json({ error: 'Power-ups are locked in the final 10 minutes.' });
       const okId = v => /^[a-z0-9]{1,24}$/.test(String(v || ''));
       const num = v => Math.max(0, Math.min(999, Math.floor(Number(v) || 0)));
-      const snap = o => { const r = {}; if (o && typeof o === 'object') for (const [k2, v] of Object.entries(o).slice(0, 30)) if (/^[a-zA-Z]{1,16}$/.test(k2)) r[k2] = num(v); return r; };
+      const snap = o => { const r = {}; if (o && typeof o === 'object') for (const [k2, v] of Object.entries(o).slice(0, 40)) if (/^[a-zA-Z]{1,16}$/.test(k2)) r[k2] = num(v); return r; };
       const p = { owner: slot, type, from: Math.max(0, Math.min(130, Number(b.from) || 0)), lbl: clean(b.lbl, 8), ord: Number(b.ord) || 0,
         seen: (Array.isArray(b.seen) ? b.seen : []).slice(0, 300).map(Number), at: Date.now() };
-      if (type === 'double') { if (!okId(b.target)) return res.status(400).json({ error: 'Invalid player.' }); p.target = b.target; }
+      if (['double', 'passer', 'wall', 'shot'].includes(type)) { if (!okId(b.target)) return res.status(400).json({ error: 'Invalid player.' }); p.target = b.target; }
       if (type === 'swap') {
         if (!okId(b.out) || !okId(b.in) || b.out === b.in) return res.status(400).json({ error: 'Invalid player.' });
         Object.assign(p, { k: b.k === 1 ? 1 : 0, out: b.out, in: b.in, keys: (Array.isArray(b.keys) ? b.keys : []).slice(0, 300).map(x => clean(x, 60)), snapOut: snap(b.snapOut), snapIn: snap(b.snapIn),

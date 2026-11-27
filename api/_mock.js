@@ -111,8 +111,8 @@ export function mock(path, q) {
     const yellow = evs.filter(e => e.type === 'Card' && e.player.id === p.id).length;
     const passes = f(rt.pass), fail = f(rt.fail);
     return { player: { id: p.id, name: p.name }, statistics: [{ games: { minutes: mins, number: p.number, position: p.pos }, goals: { total: goals, assists, saves: f(rt.save) },
-      cards: { yellow: Math.min(1, yellow), red: yellow > 1 ? 1 : 0 }, tackles: { total: f(rt.tack), interceptions: f(rt.inter) }, shots: { on: f(rt.shotOn) + goals, total: f(rt.shotOn) + goals + f(rt.shotOff) },
-      passes: { total: passes + fail, accuracy: String(passes), key: f(rt.key) + assists }, dribbles: { success: f(rt.drib) }, duels: { won: f(rt.duel) }, fouls: { drawn: f(rt.fd), committed: f(rt.fc) }, penalty: {} }] };
+      cards: { yellow: Math.min(1, yellow), red: yellow > 1 ? 1 : 0 }, tackles: { total: f(rt.tack), interceptions: f(rt.inter), blocks: f(rt.inter / 2) }, offsides: p.pos === 'F' ? f(0.008) : 0, shots: { on: f(rt.shotOn) + goals, total: f(rt.shotOn) + goals + f(rt.shotOff) },
+      passes: { total: passes + fail, accuracy: String(passes), key: f(rt.key) + assists }, dribbles: { success: f(rt.drib), attempts: f(rt.drib) + f(rt.drib * 0.8), past: f(rt.tack / 3) }, duels: { won: f(rt.duel) }, fouls: { drawn: f(rt.fd), committed: f(rt.fc) }, penalty: {} }] };
   }) }));
   return [{ ...fixtureObj(m, c, evs), events: evs, players, lineups: [] }];
 }
