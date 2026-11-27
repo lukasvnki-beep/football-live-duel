@@ -7,9 +7,11 @@
 //   duel:<code>:chat     last chat messages and emoji reactions between the two players
 //   duel:<code>:coin     who picks first ({first: 0|1}), flipped when the friend joins
 //   duel:<code>:dp:<n>   the nth draft pick (0-3), order first, other, first, other; no duplicates
+//   reports              chat reports (newest first, last 500 kept, no expiry); each one is also emailed to GMAIL_USER
 //   duel:<code>:start    when the duel started on a match already in progress (so earlier points don't count)
 
 import crypto from 'node:crypto';
+import { filterText } from './_filter.js';
 
 const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -38,6 +40,16 @@ function limited(ip) {
   if (!v || now - v.start > 3600e3) { v = { start: now, count: 0 }; creates.set(ip, v); }
   v.count++; if (creates.size > 5000) creates.clear();
   return v.count > 30;
+}
+
+const GMAIL_USER = (process.env.GMAIL_USER || '').trim(), GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+async function mailReport(r) {
+  if (!GMAIL_USER || !GMAIL_PASS) return;
+  const { default: nodemailer } = await import('nodemailer');
+  const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+  const lines = r.chat.map(m => `[${new Date(m.at).toISOString().slice(11, 16)}] ${m.who}: ${m.t}`).join('\n');
+  await t.sendMail({ from: `"Football Live Duel" <${GMAIL_USER}>`, to: GMAIL_USER, subject: `Chat report: ${r.by} reported ${r.about}`,
+    text: `${r.by} reported ${r.about} in duel ${r.code}.\nReason: ${r.reason || '(none)'}\nReporter profile: ${r.byPid || 'guest'}\nReported profile: ${r.aboutPid || 'guest'}\n\nLast messages:\n${lines || '(no messages)'}\n` });
 }
 
 async function load(code) {
@@ -106,7 +118,7 @@ export default async function handler(req, res) {
       const k = 'duel:' + meta.code;
       await redis([
         ['SET', k + ':meta', JSON.stringify(meta), 'EX', String(TTL)],
-        ['SET', k + ':p0', JSON.stringify({ name: clean(b.name, 14) || 'Player 1', tok: hashTok(token), pid: await profileId(b.pid, b.ptok) }), 'EX', String(TTL)],
+        ['SET', k + ':p0', JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player 1', tok: hashTok(token), pid: await profileId(b.pid, b.ptok) }), 'EX', String(TTL)],
       ]);
       const d = await load(meta.code);
       return res.status(200).json({ token, state: view(d, 0) });
@@ -126,7 +138,7 @@ export default async function handler(req, res) {
       }
       const token = crypto.randomBytes(18).toString('hex');
       const pid = await profileId(b.pid, b.ptok);
-      const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: clean(b.name, 14) || 'Player 2', tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
+      const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player 2', tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
       if (!ok[0]) return res.status(409).json({ error: 'Two players are already in this duel.' });
       // Coin flip: decides who picks first
       if (b.draft) await redis([['SET', k + ':coin', JSON.stringify({ first: crypto.randomInt(2), at: Date.now() }), 'EX', String(TTL), 'NX']]);
@@ -143,7 +155,7 @@ export default async function handler(req, res) {
       const picks = (Array.isArray(b.picks) ? b.picks : []).map(x => clean(x, 24)).filter(Boolean).slice(0, 2);
       if (picks.length !== 2) return res.status(400).json({ error: 'Pick exactly 2 players.' });
       const players = (Array.isArray(b.players) ? b.players : []).slice(0, 2).map(p => ({ id: clean(p.id, 24), team: clean(p.team, 12), name: clean(p.name, 60), pos: clean(p.pos, 4), num: clean(p.num, 3) }));
-      const upd = { ...me, picks, players, dare: clean(b.dare, 120), capt: b.capt === 1 ? 1 : 0, ready: true };
+      const upd = { ...me, picks, players, dare: filterText(clean(b.dare, 120)), capt: b.capt === 1 ? 1 : 0, ready: true };
       await redis([['SET', k + ':p' + slot, JSON.stringify(upd), 'KEEPTTL']]);
     } else if (b.action === 'pick') {
       // Turn-by-turn draft after the coin flip: first, other, first, other. A player can only be picked once.
@@ -167,7 +179,7 @@ export default async function handler(req, res) {
       }
     } else if (b.action === 'dare') {
       if (d.start) return res.status(409).json({ error: 'The duel has already started.' });
-      await redis([['SET', k + ':p' + slot, JSON.stringify({ ...me, dare: clean(b.dare, 120), dareOk: false }), 'KEEPTTL']]);
+      await redis([['SET', k + ':p' + slot, JSON.stringify({ ...me, dare: filterText(clean(b.dare, 120)), dareOk: false }), 'KEEPTTL']]);
     } else if (b.action === 'consent') {
       // Accept or refuse the forfeit the OTHER player proposed for me
       const o = 1 - slot, other = d.p[o];
@@ -176,13 +188,23 @@ export default async function handler(req, res) {
       await redis([['SET', k + ':p' + o, JSON.stringify(upd), 'KEEPTTL']]);
     } else if (b.action === 'say') {
       // Chat message or quick emoji reaction, only between the two players of this duel
-      const text = clean(b.text, 200);
+      const text = filterText(clean(b.text, 200));
       if (!text) return res.status(400).json({ error: 'Empty message.' });
       const lk = code + ':' + slot, now = Date.now();
       if (now - (lastSay.get(lk) || 0) < 300) return res.status(429).json({ error: 'Slow down a little.' });
       lastSay.set(lk, now); if (lastSay.size > 5000) lastSay.clear();
       const m = { s: slot, t: text, e: b.emoji ? 1 : 0, at: now, id: crypto.randomBytes(4).toString('hex') };
       await redis([['RPUSH', k + ':chat', JSON.stringify(m)], ['LTRIM', k + ':chat', '-200', '-1'], ['EXPIRE', k + ':chat', String(TTL)]]);
+    } else if (b.action === 'report') {
+      // Report the other player: saves the duel's recent chat for review (once per player per duel)
+      const [first] = await redis([['SET', k + ':rep:' + slot, '1', 'EX', String(TTL), 'NX']]);
+      if (first) {
+        const o = 1 - slot, rep = { at: Date.now(), code, by: d.p[slot] && d.p[slot].name, byPid: d.p[slot] && d.p[slot].pid || null,
+          about: d.p[o] && d.p[o].name, aboutPid: d.p[o] && d.p[o].pid || null, reason: clean(b.reason, 200),
+          chat: d.chat.slice(-30).map(m => ({ who: d.p[m.s] && d.p[m.s].name, t: m.t, at: m.at })) };
+        await redis([['LPUSH', 'reports', JSON.stringify(rep)], ['LTRIM', 'reports', '0', '499']]);
+        await mailReport(rep).catch(() => {});
+      }
     } else if (b.action === 'final') {
       // First phone to reach full time records the result; it counts once for both profiles
       const other = d.p[1 - slot];
