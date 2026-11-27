@@ -665,7 +665,9 @@ const crest=(tid,cls='')=>{const L=clubLook(tid),id='cs'+hash(tid+L.c1+L.c2+cls)
     <path d="M20 1.5 37.5 6v15c0 11-7.4 19.4-17.5 23.5C9.9 40.4 2.5 32 2.5 21V6Z" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.4"/></svg><b style="color:${ink}">${esc(L.ab)}</b></span>`};
 const pname=i=>i>=2?(S.names[i]||'Player '+(i+1)):i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||(S.mode==='online'?'your friend':'Friend')));
 // Same phone with 3 or 4 players (online and computer stay 2 players)
-const NP=()=>S.mode==='friend'?Math.min(4,Math.max(2,S.np||2)):S.mode==='online'?Math.min(4,Math.max(2,(S.online&&S.online.state&&S.online.state.max)||(S.online?2:S.np)||2)):2;
+// Lukas (Nov 27): 1v1 only for now. Set to true to bring back 3-4 player games (same phone + online).
+const MULTI_ON=false;
+const NP=()=>S.mode==='friend'?(MULTI_ON?Math.min(4,Math.max(2,S.np||2)):2):S.mode==='online'?Math.min(4,Math.max(2,(S.online&&S.online.state&&S.online.state.max)||(S.online?2:MULTI_ON?S.np:2)||2)):2;
 const ALL=()=>[...Array(NP()).keys()];
 const multi=()=>NP()>2;
 const PCOL=['var(--accent)','var(--gold)','#7cc4ff','#ff9ad5'];
@@ -762,14 +764,14 @@ function openModeSheet(f){
       <div class="names">
         <div class="field"><label for="mn1">${mode==='online'||mode==='cpu'?'Your name':'Player 1'}</label><input id="mn1" maxlength="14" value="${esc(S.names[0]==='You'?'':S.names[0])}" placeholder="You"></div>
         ${mode==='friend'?`<div class="field"><label for="mn2">Player 2</label><input id="mn2" maxlength="14" value="${esc(S.names[1]==='Friend'?'':S.names[1])}" placeholder="Friend"></div>`:''}
-        ${mode==='friend'?[2,3].filter(k=>k<np).map(k=>`<div class="field"><label for="mn${k+1}">Player ${k+1}</label><input id="mn${k+1}" maxlength="14" value="${esc(S.names[k]&&S.names[k]!=='Player '+(k+1)?S.names[k]:'')}" placeholder="Player ${k+1}"></div>`).join(''):''}
+        ${mode==='friend'&&MULTI_ON?[2,3].filter(k=>k<np).map(k=>`<div class="field"><label for="mn${k+1}">Player ${k+1}</label><input id="mn${k+1}" maxlength="14" value="${esc(S.names[k]&&S.names[k]!=='Player '+(k+1)?S.names[k]:'')}" placeholder="Player ${k+1}"></div>`).join(''):''}
       </div>
-      ${mode==='friend'||mode==='online'?`<div class="npick" role="group" aria-label="Number of players"><span class="small muted">Players</span>${[2,3,4].map(k=>`<button data-np="${k}" aria-pressed="${np===k}">${k}</button>`).join('')}</div>`:''}
+      ${MULTI_ON&&(mode==='friend'||mode==='online')?`<div class="npick" role="group" aria-label="Number of players"><span class="small muted">Players</span>${[2,3,4].map(k=>`<button data-np="${k}" aria-pressed="${np===k}">${k}</button>`).join('')}</div>`:''}
       <button class="btn" id="mgo" style="width:100%">${mode==='online'?'Create duel & invite':'Start duel'}</button>`;
     sh.querySelector('[data-close]').onclick=closeModeSheet;
     sh.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{save();mode=b.dataset.mode;draw()});
     sh.querySelectorAll('[data-np]').forEach(b=>b.onclick=()=>{save();np=+b.dataset.np;buzz(8);draw()});
-    sh.querySelector('#mgo').onclick=()=>{save();S.mode=mode;S.np=mode==='friend'||mode==='online'?np:2;store.set('fld.np',S.np);store.set('fld.mode',mode);S.src=sim?'sim':'real';buzz(20);closeModeSheet();startDuel(f)};
+    sh.querySelector('#mgo').onclick=()=>{save();S.mode=mode;S.np=MULTI_ON&&(mode==='friend'||mode==='online')?np:2;store.set('fld.np',S.np);store.set('fld.mode',mode);S.src=sim?'sim':'real';buzz(20);closeModeSheet();startDuel(f)};
   };
   const save=()=>{const a=sh.querySelector('#mn1'),b=sh.querySelector('#mn2');if(a)S.names[0]=a.value.trim()||'You';if(b)S.names[1]=b.value.trim()||'Friend';[2,3].forEach(k=>{const c=sh.querySelector('#mn'+(k+1));if(c)S.names[k]=c.value.trim()||'Player '+(k+1)});store.set('fld.names',S.names)};
   draw();
@@ -1426,7 +1428,7 @@ async function submitOnlinePicks(){
   try{
     if(!S.online){
       const pr=await ensureProfile(S.names[0]);
-      const b=await onlineFetch({body:{action:'create',max:Math.min(4,Math.max(2,S.np||2)),name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
+      const b=await onlineFetch({body:{action:'create',max:MULTI_ON?Math.min(4,Math.max(2,S.np||2)):2,name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
       S.online={code:b.state.code,token:b.token,slot:0};
     }
     store.set('fld.online',{code:S.online.code,token:S.online.token,slot:S.online.slot,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
@@ -1441,7 +1443,7 @@ async function startOnline(f){
   const tt=toast('Creating your duel…');
   try{
     const pr=await ensureProfile(S.names[0]);
-    const b=await onlineFetch({body:{action:'create',max:Math.min(4,Math.max(2,S.np||2)),name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
+    const b=await onlineFetch({body:{action:'create',max:MULTI_ON?Math.min(4,Math.max(2,S.np||2)):2,name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
     S.online={code:b.state.code,token:b.token,slot:0};applyOnline(b.state);
     store.set('fld.online',{code:S.online.code,token:S.online.token,slot:0,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
     go('wait');startSync(4000);
