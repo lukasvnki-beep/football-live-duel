@@ -563,8 +563,18 @@ Your plan|Ton offre|Tu plan
   let lang = LS.get('fld.lang', null);
   if (!SUP.includes(lang)) lang = detect();
 
+  // Remember translations: the live screen shows the same texts again and again
+  const memo = new Map();
   function tr(s) {
     if (lang === 'en' || !s || !/[A-Za-z]/.test(s)) return s;
+    const hit = memo.get(s);
+    if (hit !== undefined) return hit;
+    const out = tr0(s);
+    if (memo.size > 3000) memo.clear();
+    memo.set(s, out);
+    return out;
+  }
+  function tr0(s) {
     const m = s.match(/^(\s*)([\s\S]*?)(\s*)$/);
     const core = norm(m[2]);
     const map = EXACT[lang], c = COL[lang];
@@ -644,7 +654,7 @@ Your plan|Ton offre|Tu plan
 
   function setLang(l) {
     if (!SUP.includes(l)) return;
-    lang = l; LS.set('fld.lang', l);
+    lang = l; memo.clear(); LS.set('fld.lang', l);
     document.documentElement.lang = l;
     walk(document.body);
   }

@@ -124,7 +124,11 @@ export default async function handler(req, res) {
       const d = await load(code);
       if (!d) return res.status(404).json({ error: 'This duel does not exist or has expired.' });
       const slot = req.query.token ? slotOf(d, req.query.token) : -1;
-      return res.status(200).json(view(d, slot));
+      const out = view(d, slot);
+      // Chat unchanged since the phone's last look: don't send it again (smaller answer every poll)
+      const since = Number(req.query.since) || 0, last = d.chat.length ? d.chat[d.chat.length - 1].at : 0;
+      if (since && slot >= 0 && last <= since) { delete out.chat; out.chatSame = true; }
+      return res.status(200).json(out);
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 

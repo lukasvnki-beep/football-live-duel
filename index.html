@@ -1351,7 +1351,7 @@ function viewReveal(){
   app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:true}).then(()=>viewReveal(),e=>toast(e.message));return}S.dareOk[+b.dataset.acc]=true;viewReveal()});
   app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{if(S.mode==='online'){onlinePost({action:'consent',accept:false}).then(()=>viewReveal(),e=>toast(e.message));return}S.dares[+b.dataset.ref]='';viewReveal()});
   document.getElementById('ko').onclick=()=>{
-    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false,S.online&&S.online.state&&S.online.state.start);go('live');S.eng.start();startSync(8000);return}
+    if(S.mode==='online'){S.speed=1;S.paused=false;S.eng=realEngine(f,false,S.online&&S.online.state&&S.online.state.start);go('live');S.eng.start();startSync(15000);return}
     [0,1].forEach(i=>{if(!S.dareOk[i])S.dares[i]=''});
     S.speed=1;S.paused=false;resetPowers();
     if(f.kind==='sim'){S.eng=simEngine(f);go('live');startTimer()}
@@ -1387,7 +1387,7 @@ async function onlinePost(body){
   applyOnline(b.state);return b;
 }
 function applyOnline(st){
-  if(!st)return;S.online.state=st;S.online.penAt=Date.now();gotChat(st.chat||[]);
+  if(!st)return;if(st.chatSame)st.chat=S.online.chat||[];S.online.state=st;S.online.penAt=Date.now();gotChat(st.chat||[]);
   Object.entries(st.teams||{}).forEach(([k,t])=>{if(!TEAMS[k])TEAMS[k]=t});
   S.names=st.players.map((p,i)=>(p&&p.name)||(i===0?'Player 1':i===1?'':'Player '+(i+1)));
   st.players.forEach(p=>p&&(p.players||[]).forEach(x=>{if(!PL[x.id])PL[x.id]=x}));
@@ -1402,11 +1402,16 @@ function applyOnline(st){
 }
 function startSync(ms){
   if(S.syncT)clearInterval(S.syncT);
-  S.syncT=setInterval(syncOnce,ms);
+  S.syncMs=ms;S.syncT=setInterval(syncOnce,ms);
 }
+// Phone in the pocket or app in the background: no polling. Catch up as soon as it is back on screen.
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.online&&S.syncT)syncOnce()});
 async function syncOnce(){
-  if(!S.online)return;
-  try{const st=await onlineFetch({get:{code:S.online.code,token:S.online.token}});applyOnline(st);
+  if(!S.online||document.hidden)return;
+  try{const q={code:S.online.code,token:S.online.token};if(S.online.chatSeen!=null)q.since=S.online.chatSeen;
+    const st=await onlineFetch({get:q});applyOnline(st);
+    // During the match: every 15 s, or every 5 s while a half-time shootout is waiting for a result
+    if(S.view==='live'&&S.syncT){const want=st.pen&&!st.pen.done?5000:15000;if(S.syncMs!==want)startSync(want)}
     if(st.draft&&!st.both&&S.view==='wait'){go('flip')}
     else if(S.view==='draft'&&st.draft){if(st.both){go('reveal');startSync(5000)}else viewDraft()}
     else if(S.view==='wait'){if(st.both)go('reveal');else viewWait()}
@@ -1438,7 +1443,7 @@ async function startOnline(f){
     const b=await onlineFetch({body:{action:'create',max:Math.min(4,Math.max(2,S.np||2)),name:S.names[0],pid:pr&&pr.id,ptok:pr&&pr.token,fx:{apiId:f.apiId,home:f.home,away:f.away,comp:f.comp,leagueId:f.leagueId,kickoff:f.kickoff,status:f.status,elapsed:f.elapsed,homeTeam:f.homeTeam,awayTeam:f.awayTeam},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]}}});
     S.online={code:b.state.code,token:b.token,slot:0};applyOnline(b.state);
     store.set('fld.online',{code:S.online.code,token:S.online.token,slot:0,title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`});
-    go('wait');startSync(2500);
+    go('wait');startSync(4000);
     if(f.kind==='real'&&!(SQUAD[f.home]&&SQUAD[f.home].length&&SQUAD[f.away]&&SQUAD[f.away].length))loadPlayers(f);
   }catch(e){toast(e.message)}
 }
@@ -1499,12 +1504,12 @@ async function openOnline(code){
     try{const st=await onlineFetch({get:{code,token:saved.token}});applyOnline(st);
       S.fixture=st.fx;
       const me=st.players[saved.slot];
-      if(!st.both&&!st.draft&&(saved.slot===0||st.max>2)&&!(me&&me.ready)){S.dares=['',''];S.dareOk=[false,false];go('wait');startSync(2500);return}
-      if(st.draft&&!st.both){S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;S.flipDone=true;go('draft');startSync(2500);loadPlayers(S.fixture);return}
+      if(!st.both&&!st.draft&&(saved.slot===0||st.max>2)&&!(me&&me.ready)){S.dares=['',''];S.dareOk=[false,false];go('wait');startSync(4000);return}
+      if(st.draft&&!st.both){S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;S.flipDone=true;go('draft');startSync(4000);loadPlayers(S.fixture);return}
       if(!me||!me.ready){S.picks=[[],[]];S.dares=['',''];S.dareOk=[false,false];S.turn=saved.slot;S.filter='all';S.eng=null;go('draft');loadPlayers(S.fixture);return}
       if(!st.both){go('wait');startSync(4000);return}
       const started=LIVE.has(st.fx.status)||Date.now()>Date.parse(st.fx.kickoff);
-      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false,st.start);go('live');S.eng.start();startSync(8000)}else{go('reveal');startSync(5000)}
+      if(started){S.speed=1;S.paused=false;S.eng=realEngine(S.fixture,false,st.start);go('live');S.eng.start();startSync(15000)}else{go('reveal');startSync(5000)}
     }catch(e){toast(e.message);store.del('fld.online');go('home')}
     return;
   }
@@ -1542,7 +1547,7 @@ function viewJoin(){
       store.set('fld.online',{code:S.joinCode,token:b.token,slot:sl,title:`${TEAMS[b.state.fx.home].name} vs ${TEAMS[b.state.fx.away].name}`});
       history.replaceState(null,'',location.pathname);
       S.fixture=b.state.fx;S.dares=['',''];S.dareOk=[false,false];S.eng=null;S.filter='all';S.turn=sl;
-      if(b.state.draft){go('flip');startSync(2500);loadPlayers(S.fixture)}else if((b.state.max||2)>2){S.picks=b.state.players.map(()=>[]);go('wait');startSync(2500);loadPlayers(S.fixture)}else{S.joining=true;startDuel(b.state.fx)}
+      if(b.state.draft){go('flip');startSync(4000);loadPlayers(S.fixture)}else if((b.state.max||2)>2){S.picks=b.state.players.map(()=>[]);go('wait');startSync(4000);loadPlayers(S.fixture)}else{S.joining=true;startDuel(b.state.fx)}
     }catch(e){toast(e.message);jg.disabled=false;jg.textContent='Accept the duel'}
   };
 }
@@ -1922,27 +1927,29 @@ function evShort(e,i){
   return ['',''];
 }
 let freshT=null;
+// Only touch the page when a block really changed (less work for the phone, and for the translator)
+function setHTML(el,h){if(el&&el._h!==h){el._h=h;el.innerHTML=h}}
 function updateLive(before){
   const E=S.eng;if(!document.getElementById('board'))return;
   cpuPowers();reactToFeed();
   const tot=totals();
-  document.getElementById('mstrip').innerHTML=mstrip();
-  document.getElementById('board').innerHTML=duelPanel(true);
+  setHTML(document.getElementById('mstrip'),mstrip());
+  setHTML(document.getElementById('board'),duelPanel(true));
   if(before){SIDES().forEach((i,n)=>{if(before[i]!==tot[i]){const el=document.querySelectorAll('.duel .tot')[n];if(el)el.classList.add('bump')}})}
-  document.getElementById('pbar').innerHTML=pbar();
+  setHTML(document.getElementById('pbar'),pbar());
   // Half-time totals (for the comeback badge), Final 10' banner
   if(!S.htTot&&nowMatchMin(E)>=46)S.htTot=tot.slice();
   const f10=inF10(E);if(f10&&!S.f10Seen){S.f10Seen=true;buzz([100,50,100]);fx('f10');toast('🔥 Final 10 minutes: every point counts ×2, power-ups are locked')}
   penTick();
-  document.getElementById('banner').innerHTML=f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':penBanner();bindPen();
+  setHTML(document.getElementById('banner'),f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':penBanner());bindPen();
   drawSheet();
   const eb=document.getElementById('errbox');
-  eb.innerHTML=E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'';
+  setHTML(eb,E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'');
   const [L,R]=SIDES();
   const ev=[...E.shown(),...S.pwFeed].sort((x,y)=>y.ord-x.ord);
   const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*evMult(i,e);const [h,w]=evShort(e,i);
     return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
-  document.getElementById('feed').innerHTML=ev.length?ev.map(e=>{
+  setHTML(document.getElementById('feed'),ev.length?ev.map(e=>{
     let on=ALL().map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
     const mc=`<span class="mc">${esc(String(e.lbl||'').replace('′',''))}′</span>`;
     if(multi()){const [h,w]=evShort(e,null);
@@ -1950,7 +1957,7 @@ function updateLive(before){
       return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}${cs?'<div class="mchips">'+cs+'</div>':''}</div></div>`}
     if(!on[0]&&!on[1]){const [h,w]=evShort(e,null);return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}</div></div>`}
     return `<div class="tr ${e.type==='var'?'void':''}">${on[L]?cell(e,L,'l'):'<span></span>'}${mc}${on[R]?cell(e,R,'r'):'<span></span>'}</div>`}).join('')
-    :`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':E.kind==='real'&&!E.replay&&!LIVE.has(E.status)&&!FINAL.has(E.status)?'Waiting for kickoff. Your players\' actions will show up here.':'Goals, assists and cards will show up here as they happen.'}</div>`;
+    :`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':E.kind==='real'&&!E.replay&&!LIVE.has(E.status)&&!FINAL.has(E.status)?'Waiting for kickoff. Your players\' actions will show up here.':'Goals, assists and cards will show up here as they happen.'}</div>`);
   if(E.kind==='real'&&!E.replay){
     const fr=()=>{const el=document.getElementById('fresh');if(!el||S.eng!==E){clearInterval(freshT);return}
       const ago=E.lastFetch?Math.round((Date.now()-E.lastFetch)/1000):null;const nx=E.nextAt?Math.max(0,Math.round((E.nextAt-Date.now())/1000)):null;
