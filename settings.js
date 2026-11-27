@@ -43,7 +43,6 @@ Language|Langue|Idioma
 ⇄ SWAP|⇄ ÉCHANGE|⇄ CAMBIO
 🛡 Shield|🛡 Bouclier|🛡 Escudo
 ⚡ Double Points|⚡ Points doublés|⚡ Puntos dobles
-☠ Negative Points|☠ Points négatifs|☠ Puntos negativos
 Power-ups|Bonus|Poderes
 Flipping…|Pile ou face…|Lanzando la moneda…
 vs|contre|contra
@@ -213,10 +212,9 @@ Buys the drinks next match night|Paie les verres au prochain soir de match|Paga 
 Sings the winner's club anthem on video|Chante l'hymne du club du gagnant en vidéo|Canta el himno del club del ganador en vídeo
 Double Points|Points doublés|Puntos dobles
 One of your players scores ×2 for 10 min|Un de tes joueurs marque ×2 pendant 10 min|Uno de tus jugadores puntúa ×2 durante 10 min
-Negative Points|Points négatifs|Puntos negativos
-One of their players scores minus for 5 min|Un de leurs joueurs marque en négatif pendant 5 min|Uno de sus jugadores puntúa en negativo 5 min
 Shield|Bouclier|Escudo
-Blocks the next Negative Points used on you in the next 15 min|Bloque les prochains Points négatifs utilisés contre toi dans les 15 min|Bloquea los próximos Puntos negativos usados contra ti en 15 min
+Your players lose no points for 15 min|Tes joueurs ne perdent aucun point pendant 15 min|Tus jugadores no pierden puntos durante 15 min
+⚽ +1 ×2 from the penalties: both your players, 46′–50′|⚽ +1 ×2 grâce aux tirs au but : tes deux joueurs, de 46′ à 50′|⚽ +1 ×2 por los penaltis: tus dos jugadores, del 46′ al 50′
 Half time|Mi-temps|Descanso
 The 90 minutes play out in about a minute and a half. You can speed it up.|Les 90 minutes se jouent en une minute et demie environ. Tu peux accélérer.|Los 90 minutos se juegan en un minuto y medio más o menos. Puedes acelerarlo.
 This match has finished, so it replays minute by minute. Passes, tackles and other stats are added at full time.|Ce match est terminé, il est donc rejoué minute par minute. Les passes, tacles et autres stats sont ajoutés à la fin.|Este partido ha terminado, así que se repite minuto a minuto. Pases, entradas y otras estadísticas se suman al final.
@@ -387,8 +385,8 @@ Missed pass|Passe ratée|Pase fallado
 Foul committed|Faute commise|Falta cometida
 Red card (second yellow: −25 in total)|Carton rouge (deuxième jaune : −25 au total)|Tarjeta roja (segunda amarilla: −25 en total)
 ⚡ Double Points: everything your chosen player earns counts double|⚡ Points doublés : tout ce que gagne ton joueur choisi compte double|⚡ Puntos dobles: todo lo que gana tu jugador elegido cuenta doble
-☠ Negative Points: everything one of your rival's players earns counts as minus|☠ Points négatifs : tout ce que gagne un joueur de ton rival compte en négatif|☠ Puntos negativos: todo lo que gana un jugador de tu rival cuenta en negativo
-🛡 Shield: blocks the next Negative Points your rival uses on you|🛡 Bouclier : bloque les prochains Points négatifs que ton rival utilise contre toi|🛡 Escudo: bloquea los próximos Puntos negativos que tu rival use contra ti
+🛡 Shield: your players lose no points (fouls, cards, missed passes…)|🛡 Bouclier : tes joueurs ne perdent aucun point (fautes, cartons, passes ratées…)|🛡 Escudo: tus jugadores no pierden puntos (faltas, tarjetas, pases fallados…)
+⚽ Half-time penalties: the winner scores ×2 on both players|⚽ Tirs au but de la mi-temps : le gagnant marque ×2 sur ses deux joueurs|⚽ Penaltis del descanso: el ganador puntúa ×2 con sus dos jugadores
 Each of you gets one of each per match, plus one ⇄ Swap: take one of your players out and bring in anyone on the pitch. Points already earned stay. If your player is subbed off, the player coming on takes his place automatically. Use them while the ball is in play. Timing is in match minutes.|Chacun en a un de chaque par match, plus un ⇄ Échange : sors un de tes joueurs et fais entrer n'importe qui sur le terrain. Les points déjà gagnés restent. Si ton joueur est remplacé, le joueur qui entre prend sa place automatiquement. Utilise-les quand le ballon est en jeu. Le temps est en minutes de match.|Cada uno tiene uno de cada por partido, más un ⇄ Cambio: saca a uno de tus jugadores y mete a cualquiera del campo. Los puntos ya ganados se quedan. Si sustituyen a tu jugador, el que entra ocupa su lugar automáticamente. Úsalos con el balón en juego. El tiempo va en minutos de partido.
 Both of you can pick the same player. Pick before kickoff. Practice matches score goals, assists and cards only. Finished real matches are replayed minute by minute.|Vous pouvez choisir le même joueur tous les deux. Choisis avant le coup d'envoi. Les matchs d'entraînement comptent seulement les buts, passes décisives et cartons. Les vrais matchs terminés sont rejoués minute par minute.|Podéis elegir los dos al mismo jugador. Elige antes del inicio. Los partidos de práctica solo cuentan goles, asistencias y tarjetas. Los partidos reales terminados se repiten minuto a minuto.
 Your league|Ta ligue|Tu liga
@@ -423,7 +421,7 @@ Pick a real football match and choose 2 players. Your friend does the same, on t
 Every touch counts.|Chaque ballon compte.|Cada toque cuenta.
 Passes, shots, tackles, goals and assists score live points. Cards and fouls cost you.|Passes, tirs, tacles, buts et passes décisives rapportent des points en direct. Les cartons et les fautes te coûtent.|Pases, tiros, entradas, goles y asistencias dan puntos en directo. Tarjetas y faltas te restan.
 Play your power-ups.|Joue tes bonus.|Usa tus poderes.
-Double your player, flip your rival's points, shield yourself, or swap a player who's having a bad day.|Double ton joueur, inverse les points de ton rival, protège-toi, ou échange un joueur qui passe une mauvaise journée.|Dobla a tu jugador, invierte los puntos de tu rival, protégete o cambia a un jugador que tenga un mal día.
+Double your player, shield yourself from minus points, or swap a player who's having a bad day.|Double ton joueur, protège-toi des points négatifs, ou échange un joueur qui passe une mauvaise journée.|Dobla a tu jugador, protégete de los puntos negativos, o cambia a un jugador que tiene un mal día.
 Pick your player name|Choisis ton nom de joueur|Elige tu nombre de jugador
 It's how friends find you and how you show up in the rankings.|C'est comme ça que tes amis te trouvent et que tu apparais au classement.|Así te encuentran tus amigos y así apareces en el ranking.
 e.g. Lukas|ex. Lukas|p. ej. Lukas
