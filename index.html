@@ -1452,12 +1452,13 @@ function openChat(){
   S.chatOpen=true;S.online.unread=0;
   let sh=document.getElementById('chatsheet');
   if(!sh){sh=document.createElement('div');sh.id='chatsheet';sh.className='chatsheet';sh.setAttribute('role','dialog');sh.setAttribute('aria-label','Chat');
-    sh.innerHTML=`<header><b></b><button id="cmute"></button><button id="cclose" aria-label="Close chat">Close</button></header><div class="chatlist" id="clist"></div>
+    sh.innerHTML=`<header><b></b><button id="creport" aria-label="Report this player">Report</button><button id="cmute"></button><button id="cclose" aria-label="Close chat">Close</button></header><div class="chatlist" id="clist"></div>
       <div class="emorow">${EMOJIS.map(e=>`<button data-emo="${e}" aria-label="Send ${e}">${e}</button>`).join('')}</div>
       <form class="chatin" id="cform"><input id="ctext" maxlength="200" placeholder="Say something…" autocomplete="off"><button>Send</button></form>`;
     document.body.appendChild(sh);
     sh.querySelector('#cclose').onclick=closeChat;
     sh.querySelector('#cmute').onclick=()=>{store.set(muteKey(),!store.get(muteKey(),false));drawChat()};
+    sh.querySelector('#creport').onclick=reportChat;
     sh.querySelectorAll('[data-emo]').forEach(b=>b.onclick=()=>say(b.dataset.emo,true));
     sh.querySelector('#cform').onsubmit=e=>{e.preventDefault();const i=document.getElementById('ctext');const t=i.value.trim();if(!t)return;i.value='';say(t,false)};
   }
@@ -1476,6 +1477,13 @@ function drawChat(scroll){
   box.innerHTML=list.length?list.map(m=>`<div class="msg ${m.s===S.online.slot?'me':''} ${m.e?'big':''}">${esc(m.t)}${m.e?'':`<small>${new Date(m.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small>`}</div>`).join('')
     :`<p class="small muted" style="text-align:center;margin:auto">${muted?`You muted ${esc(other)}.`:'Talk trash, celebrate goals. Only you and '+esc(other)+' see this.'}</p>`;
   if(scroll||atBottom)box.scrollTop=box.scrollHeight;
+}
+// Report: tap once to arm, tap again within 4s to send. Saves the recent chat for review and mutes the other player.
+async function reportChat(){
+  const b=document.getElementById('creport');if(!b)return;
+  if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Tap to confirm';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent='Report'}},4000);return}
+  delete b.dataset.arm;b.textContent='Report';
+  try{await onlinePost({action:'report'});store.set(muteKey(),true);drawChat();toast('Thanks. We got your report and muted '+pname(1-S.online.slot)+'.')}catch(e){toast(e.message)}
 }
 async function say(text,emoji){
   try{await onlinePost({action:'say',text,emoji});if(emoji)burst(text,'You');drawChat(true)}catch(e){toast(e.message);const i=document.getElementById('ctext');if(!emoji&&i&&!i.value)i.value=text}
