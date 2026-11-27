@@ -481,6 +481,7 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
   </div>
 </nav>
 <div class="splash" id="splash" aria-hidden="true"><div class="sp-ball"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="sbbg" cx="30%" cy="20%" r="95%"><stop offset="0" stop-color="#13283d"/><stop offset="1" stop-color="#08111e"/></radialGradient><linearGradient id="sba" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ff7c8"/><stop offset="1" stop-color="#2fd48d"/></linearGradient><linearGradient id="sbb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7dff"/><stop offset="1" stop-color="#2a3fd6"/></linearGradient><clipPath id="sbc"><circle cx="256" cy="256" r="176"/></clipPath></defs><g transform="translate(256 256) scale(1) translate(-256 -256)"><g clip-path="url(#sbc)"><rect width="256" height="512" fill="url(#sba)"/><rect x="256" width="256" height="512" fill="url(#sbb)"/><path d="M256.0 188.0 L315.0 230.8 L292.4 300.2 L219.6 300.2 L197.0 230.8Z" fill="#08111e" stroke="#08111e" stroke-width="30" stroke-linejoin="round"/><line x1="256.0" y1="180.0" x2="256.0" y2="60.0" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="322.6" y1="228.4" x2="436.7" y2="191.3" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="297.1" y1="306.6" x2="367.7" y2="403.7" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="214.9" y1="306.6" x2="144.3" y2="403.7" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="189.4" y1="228.4" x2="75.3" y2="191.3" stroke="#08111e" stroke-width="14" stroke-linecap="round"/></g><circle cx="256" cy="256" r="176" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="6"/><ellipse cx="200" cy="160" rx="60" ry="30" fill="#fff" opacity=".18" transform="rotate(-30 200 160)"/></g></svg></div><div class="sp-logo">FOOTBALL<br><span>LIVE</span> DUEL</div><div class="sp-bar"><i></i></div></div>
+<script src="/premium.js"></script>
 <script>
 (function(){
 // ================= Shared registry =================
@@ -2158,6 +2159,7 @@ function viewProfile(){
     <div><div class="eyebrow">Profile</div><h2 style="font-size:2.4rem;text-transform:uppercase">${esc(S.names[0]||'You')}</h2></div>
     <div class="record"><div><b class="num" style="color:var(--accent)">${c.W}</b><span>Won</span></div><div><b class="num">${c.D}</b><span>Drawn</span></div><div><b class="num" style="color:var(--red)">${c.L}</b><span>Lost</span></div></div>
     <div id="league">${leagueHtml('card')}</div>
+    <div id="plan"></div>
     ${accountHtml()}
     <div id="badges">${badgesHtml()}</div>
     <div class="lg"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="snd" ${store.get('fld.sound',true)?'checked':''}> Goal sound</label><label class="toggle"><input type="checkbox" id="vib" ${store.get('fld.vib',true)?'checked':''}> Vibrate on goals and power-ups</label><button class="linkbtn" id="rename" style="text-align:left;padding:0">Change your player name</button></div>
@@ -2169,7 +2171,7 @@ function viewProfile(){
     ${h.length?'<button class="linkbtn" id="clear">Clear history</button>':''}
     <a class="linkbtn" href="/privacy.html">Privacy policy</a>
   </section>`;
-  bindLeague();bindAccount();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
+  bindLeague();bindAccount();if(window.FLDPremium)FLDPremium.card();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
   document.getElementById('snd').onchange=e=>store.set('fld.sound',e.target.checked);
   document.getElementById('vib').onchange=e=>store.set('fld.vib',e.target.checked);
   document.getElementById('rename').onclick=async()=>{const me=store.get('fld.me',null);const n=(prompt('Your player name',S.names[0])||'').trim().slice(0,14);if(!n)return;
