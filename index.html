@@ -614,11 +614,9 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 
 // ================= Simulated (practice) data =================
 const SIM_TEAMS={nor:['Northport FC','NOR','#5fb6ff'],val:['Valecrest United','VAL','#ff8a5c'],riv:['Riverside Athletic','RIV','#c39bff'],kin:['Kingsmoor City','KIN','#ffd77c'],har:['Harbor Town','HAR','#4fe0d2'],ash:['Ashford Rovers','ASH','#ff6f91'],eas:['Eastfield','EAS','#a8e05f'],wes:['Westbrook Albion','WES','#f2f2f2']};
-const SIM_FIXTURES=[
-  {id:'f1',kind:'sim',home:'nor',away:'val',comp:'Coast League',when:'Practice'},
-  {id:'f2',kind:'sim',home:'riv',away:'kin',comp:'Coast League',when:'Practice'},
-  {id:'f3',kind:'sim',home:'har',away:'ash',comp:'Cup · Quarter-final',when:'Practice'},
-  {id:'f4',kind:'sim',home:'eas',away:'wes',comp:'Derby day',when:'Practice'}];
+// Lukas (Nov 27): one practice match only, Bayern Munich vs Paris Saint-Germain with real player names.
+// No logos: coloured shields with initials. The old fictional teams stay registered so saved practice games still open.
+const SIM_FIXTURES=[{id:'f5',kind:'sim',home:'bay',away:'psg',comp:'Practice match',when:'Practice'}];
 const FIRST=['Leo','Mateo','Jonas','Rafa','Kai','Theo','Nico','Luca','Elias','Sami','Dario','Owen','Felix','Iker','Malik','Tomas','Ezra','Bruno','Ilan','Remy','Aaron','Yusuf','Milo','Viktor','Hugo','Joel','Emil','Ruben','Caio','Arlo'];
 const LAST=['Moreau','Okafor','Lindqvist','Barros','Hale','Navarro','Kowal','Ferreira','Adeyemi','Strand','Costa','Brennan','Vidal','Sato','Mertens','Quinn','Duarte','Novak','Haddad','Rios','Keane','Varga','Holm','Petit','Silva','Mensah','Larsen','Abreu','Fischer','Doyle'];
 const SHAPE=['GK','DEF','DEF','MID','MID','MID','FWD','FWD'];
@@ -628,6 +626,14 @@ Object.entries(SIM_TEAMS).forEach(([tid,[name,short,color]])=>{
   SQUAD[tid]=SHAPE.map((pos,i)=>{let n;do{n=FIRST[Math.floor(r()*FIRST.length)]+' '+LAST[Math.floor(r()*LAST.length)]}while(used.has(n));used.add(n);
     const id=tid+i;PL[id]={id,team:tid,name:n,pos,form:1+Math.floor(r()*3)};return id});
 });
+// [name, position, shirt number, form 1-3]
+const REAL_SIM={
+  bay:['Bayern Munich','FCB','#e2344b',[['Manuel Neuer','GK',1,2],['Joshua Kimmich','DEF',6,3],['Dayot Upamecano','DEF',2,2],['Jonathan Tah','DEF',4,2],['Alphonso Davies','DEF',19,2],
+    ['Aleksandar Pavlović','MID',45,2],['Leon Goretzka','MID',8,2],['Jamal Musiala','MID',42,3],['Michael Olise','FWD',17,3],['Harry Kane','FWD',9,3],['Luis Díaz','FWD',14,2]]],
+  psg:['Paris Saint-Germain','PSG','#4f7fd6',[['Lucas Chevalier','GK',30,2],['Achraf Hakimi','DEF',2,3],['Marquinhos','DEF',5,2],['Willian Pacho','DEF',51,2],['Nuno Mendes','DEF',25,3],
+    ['Vitinha','MID',17,3],['João Neves','MID',87,3],['Warren Zaïre-Emery','MID',33,2],['Ousmane Dembélé','FWD',10,3],['Khvicha Kvaratskhelia','FWD',7,3],['Désiré Doué','FWD',14,2]]]};
+Object.entries(REAL_SIM).forEach(([tid,[name,short,color,pl]])=>{TEAMS[tid]={name,short,color};
+  SQUAD[tid]=pl.map(([n,pos,num,form],i)=>{const id=tid+i;PL[id]={id,team:tid,name:n,pos,num,form};return id})});
 
 // ================= Real data helpers =================
 function teamKey(t){
@@ -1132,7 +1138,7 @@ function duelPanel(live){
         v=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,pid)=>x+sc[i].adjOf(pid),0);if(cap)v+=sc[i].cap;
         const pr=rows.filter(r=>r.id!==id);if(pr.length){const last=pr[pr.length-1];const w=last.endHow==='swap'?(S.swaps||[]).find(x=>x.owner===i&&x.out===last.id):null;
           prev=w?`⇄ <span>Traded</span> <b data-noi18n>${esc(PL[last.id].name)}</b> <span data-noi18n>${(g=>g<0?'−'+(-g):'+'+g)(ghostPts(w,t))}</span> <span>since</span> ${esc(last.to||'')}`:`${'Subbed'} for ${esc(PL[last.id].name)} ${esc(last.to||'')}`}}
-      const tags=act.filter(x=>x.p.target===id&&!blk.has(x.p)&&(isBoost(x.p.type)?x.p.owner===i:x.p.owner!==i)).map(x=>`<i class="tag ${x.p.type}" data-noi18n>${isBoost(x.p.type)?POWER[x.p.type].tag:'FLIP'} ${x.left}′</i>`).join('')+(live&&boostOn(E)&&penWin()===i?`<i class="tag pen">⚽ ×2 ${PEN_FROM+PEN_DUR-nowMatchMin(E)}′</i>`:'');
+      const tags=act.filter(x=>x.p.target===id&&!blk.has(x.p)&&(isBoost(x.p.type)?x.p.owner===i:x.p.owner!==i)).map(x=>`<i class="tag ${x.p.type}" data-noi18n>${isBoost(x.p.type)?POWER[x.p.type].tag:'FLIP'} ${x.left>POWER[x.p.type].dur?'⏳'+(x.left-POWER[x.p.type].dur):x.left}′</i>`).join('')+(live&&boostOn(E)&&penWin()===i?`<i class="tag pen">⚽ ×2 ${PEN_FROM+PEN_DUR-nowMatchMin(E)}′</i>`:'');
       const o=off.has(id);
       return `<div class="sc ${cap?'cap':''} ${o?'off':''}">${cap?'<span class="cb" title="Captain ×1.5">C</span>':''}${shirt(id)}
         <b class="nm">${esc(p.name)}</b><span class="sub">${p.pos||'–'} · ${esc(TEAMS[p.team].short)}${o?' · sent off':''}</span>
@@ -1147,7 +1153,7 @@ function onlineBoard(sc,tot,act,blk,ok,off,t){
   const E=S.eng,[L,R]=SIDES(),n=v=>v<0?'−'+(-v):v;
   const slot=(i,k)=>{const id=current(i)[k];if(!id)return null;const rows=sc[i].rows.filter(r=>r.k===k),ids=[...new Set(rows.map(r=>r.id))];
     const v=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,pid)=>x+sc[i].adjOf(pid),0);
-    const tags=act.filter(x=>x.p.target===id&&!blk.has(x.p)&&(isBoost(x.p.type)?x.p.owner===i:x.p.owner!==i)).map(x=>`<i class="tag ${x.p.type}" data-noi18n>${isBoost(x.p.type)?POWER[x.p.type].tag:'FLIP'} ${x.left}′</i>`).join('')+(boostOn(E)&&penWin()===i?`<i class="tag pen">⚽ ×2 ${PEN_FROM+PEN_DUR-nowMatchMin(E)}′</i>`:'');
+    const tags=act.filter(x=>x.p.target===id&&!blk.has(x.p)&&(isBoost(x.p.type)?x.p.owner===i:x.p.owner!==i)).map(x=>`<i class="tag ${x.p.type}" data-noi18n>${isBoost(x.p.type)?POWER[x.p.type].tag:'FLIP'} ${x.left>POWER[x.p.type].dur?'⏳'+(x.left-POWER[x.p.type].dur):x.left}′</i>`).join('')+(boostOn(E)&&penWin()===i?`<i class="tag pen">⚽ ×2 ${PEN_FROM+PEN_DUR-nowMatchMin(E)}′</i>`:'');
     const w=(S.swaps||[]).find(x=>x.owner===i&&x.k===k);return {id,v,tags,w}};
   const big=k=>{const x=slot(L,k);if(!x)return '<div></div>';const p=PL[x.id],o=off.has(x.id);
     return `<div class="obig ${o?'off':''}">${shirt(x.id)}<b class="nm">${esc(p.name)}</b><span class="sub">${p.pos||'–'} · ${esc(TEAMS[p.team].short)}${o?' · sent off':''}</span>
@@ -1164,23 +1170,23 @@ function onlineBoard(sc,tot,act,blk,ok,off,t){
 function pbar(){
   const E=S.eng,act=activePowers(),blk=blockedNegs(),sd=SIDES(),[L,R]=sd;
   let pills=i=>act.filter(x=>x.p.owner===i&&!blk.has(x.p)&&!blk.shields.has(x.p)).map(x=>{const P=POWER[x.p.type];
-    return `<div class="pill ${x.p.type}"><b>${P.icon} ${P.label}</b>${x.p.target?esc(PL[x.p.target].name)+' · ':''}${x.left}′<div class="bar"><i style="width:${Math.round(100*x.left/P.dur)}%"></i></div></div>`}).join('');
+    return `<div class="pill ${x.p.type}"><b>${P.icon} ${P.label}</b>${x.p.target?esc(PL[x.p.target].name)+' · ':''}${x.left>P.dur?`<span>starts in</span> ${x.left-P.dur}′`:x.left+'′'}<div class="bar"><i style="width:${Math.min(100,Math.round(100*x.left/P.dur))}%"></i></div></div>`}).join('');
   const penPill=i=>boostOn(E)&&penWin()===i?`<div class="pill pen"><b>⚽ ×2</b><span>Penalties</span> · ${PEN_FROM+PEN_DUR-nowMatchMin(E)}′<div class="bar"><i style="width:${Math.round(100*(PEN_FROM+PEN_DUR-nowMatchMin(E))/PEN_DUR)}%"></i></div></div>`:'';
   const pillsOld=pills;pills=i=>penPill(i)+pillsOld(i);
-  const mine=S.mode==='friend'?S.powers.length:S.powers.filter(p=>p.owner===L).length,max=S.mode==='friend'?PTYPES.length*NP():PTYPES.length;
+  const mine=S.mode==='friend'?S.powers.length:S.powers.filter(p=>p.owner===L).length,max=S.mode==='friend'?PW_MAX*NP():PW_MAX;
   const half=Math.ceil(sd.length/2),pl=a=>a.map(pills).join('');
   return `<div class="pbar"><div class="pact">${pl(sd.slice(0,half))}</div><button class="pbtn" id="pwopen" ${E.final||inF10(E)?'disabled':''}>${!inF10(E)&&x2Count(L)>1?'<em class="x2b" data-noi18n>×2 <b>2</b></em>':''}<span class="i">${inF10(E)?'🔒':'⚡'}</span><span>Power-ups</span><small>${inF10(E)?'Locked':mine+'/'+max+' used'}</small></button><div class="pact r">${pl(sd.slice(half))}</div></div>`;
 }
 function powersSheet(){
-  const E=S.eng,now=nowMin(E),lock=inF10(E),ok=inPlay(E)&&!lock;
+  const E=S.eng,now=nowMin(E);
   const sides=ALL().filter(canControl);
   return sides.map(i=>`<div class="pw"><h3>${esc(pname(i))}</h3><div class="pwrow">${PTYPES.map(type=>{
       const used=S.powers.find(p=>p.owner===i&&p.type===type),P=POWER[type];
-      const left=used?used.from+P.dur-now:0,on=used&&left>0;
-      const state=used?(on?`Active · ${left}′ left`:'Used'):lock?'Locked in the final 10′':ok?'Tap to use':'Wait for play';
-      return `<button class="pwb ${type} ${on?'on':''}" data-pw="${i}:${type}" ${used||!ok?'disabled':''}>${type==='double'&&x2Count(i)>1?'<em class="x2b" data-noi18n>2</em>':''}<b>${P.icon} ${P.label}</b><span>${P.desc}</span><span class="st">${state}</span>${type==='double'&&penPending(i)?`<span class="pwx">⚽ +1 ×2 from the penalties: both your players, 46′–50′</span>`:''}</button>`}).join('')}</div>
+      const left=used?used.from+P.dur-now:0,on=used&&left>0,why=pwBlock(i,E);
+      const state=used?(on?(left>P.dur?`Starts in ${left-P.dur}′`:`Active · ${left}′ left`):'Used'):why||`Tap to use · ${P.dur} min`;
+      return `<button class="pwb ${type} ${on?'on':''}" data-pw="${i}:${type}" ${used||why?'disabled':''}>${type==='double'&&x2Count(i)>1?'<em class="x2b" data-noi18n>2</em>':''}<b>${P.icon} ${P.label}</b><span>${P.desc}</span><span class="st">${state}</span>${type==='double'&&penPending(i)?`<span class="pwx">⚽ +1 ×2 from the penalties: both your players, 46′–50′</span>`:''}</button>`}).join('')}</div>
     ${S.pwPick&&S.pwPick.owner===i?`<div class="pwpick"><span>${isBoost(S.pwPick.type)?'Use it on which of your players?':'Flip the points of which of their players?'}</span><div class="tlist">${(isBoost(S.pwPick.type)?[i]:multi()?ALL().filter(j=>j!==i):[1-i]).flatMap(j=>current(j).map(id=>[j,id])).map(([j,id])=>`<button data-pwt="${id}">${shirt(id)}<span><b>${esc(PL[id].name)}</b> <small>${esc(TEAMS[PL[id].team].short)}${multi()&&j!==i?' · '+esc(pname(j)):''}</small></span></button>`).join('')}</div><button class="linkbtn" data-pwx="1">Cancel</button></div>`:''}
-  </div>`).join('')+`<p class="small muted" style="margin:0">Each power-up works once per match, and not from the 80th minute. Timing is in match minutes.</p>`;
+  </div>`).join('')+`<p class="small muted" style="margin:0">Choose 2 power-ups per match. Each one starts 3 minutes after you tap it, so nobody can use one just before a penalty. Not from the 80th minute.</p>`;
 }
 function swapSheet(owner,k){
   const out=current(owner)[k],pool=swapPool(owner);
@@ -1211,12 +1217,19 @@ const FORFEITS=false;
 const DARES=['Buys the next kebab','Wears my team\'s shirt tomorrow','Posts the result on their story','Uses a profile photo I choose for 3 days','Buys the drinks next match night','Sings the winner\'s club anthem on video'];
 
 // ================= Power-ups =================
-const POWER={double:{dur:10,label:'Double Points',icon:'⚡',desc:'One of your players scores ×2 for 10 min',m:2,tag:'×2'},
-  shield:{dur:15,label:'Shield',icon:'🛡',desc:'Your players lose no points for 15 min'},
+const POWER={double:{dur:10,label:'Double Points',icon:'⚡',desc:'×2 on one player',long:'everything your chosen player earns counts double',m:2,tag:'×2'},
+  shield:{dur:15,label:'Shield',icon:'🛡',desc:'No minus points',long:'your players lose no points (fouls, cards, missed passes…)'},
   // Boosts on one group of actions (Nov 27). Only stats API-Football gives live, so no "final third" or "defensive half".
-  passer:{dur:10,label:'Pass Master',icon:'🎯',desc:'×3 on passes, key passes and assists for 10 min',m:3,cat:'pass',tag:'×3 🎯'},
-  wall:{dur:10,label:'The Wall',icon:'🧱',desc:'×3 on tackles, interceptions, blocks, duels won and saves for 10 min',m:3,cat:'def',tag:'×3 🧱'},
-  shot:{dur:10,label:'Sniper',icon:'💥',desc:'×3 on shots and goals for 10 min',m:3,cat:'shot',tag:'×3 💥'}};
+  passer:{dur:10,label:'Pass Master',icon:'🎯',desc:'×3 on passing',long:'×3 on passes, key passes and assists',m:3,cat:'pass',tag:'×3 🎯'},
+  wall:{dur:10,label:'The Wall',icon:'🧱',desc:'×3 on defending',long:'×3 on tackles, interceptions, blocks, duels won and saves',m:3,cat:'def',tag:'×3 🧱'},
+  shot:{dur:10,label:'Sniper',icon:'💥',desc:'×3 on shots and goals',long:'×3 on shots and goals',m:3,cat:'shot',tag:'×3 💥'}};
+// Lukas (Nov 27): 2 power-ups per match. A power-up starts 3 match minutes after you tap it, and can't be tapped
+// within 3 minutes of a card or VAR check. The data arrives after the action, so this stops using one just before a penalty or free kick.
+const PW_MAX=2,PW_DELAY=3,PW_QUIET=3;
+const pwCount=i=>S.powers.filter(p=>p.owner===i&&POWER[p.type]).length;
+function pwBlock(i,E){if(!E)return 'Wait for play';if(inF10(E)||nowMatchMin(E)+PW_DELAY>=F10)return 'Locked in the final 10′';
+  if(pwCount(i)>=PW_MAX)return `You used your ${PW_MAX} power-ups`;if(!inPlay(E))return 'Wait for play';
+  const now=nowMin(E);if(E.shown().some(e=>['yellow','second','red','var','varinfo','miss'].includes(e.type)&&now-(e.el||0)<PW_QUIET))return 'Paused: card or VAR just now';return ''}
 const isBoost=t=>!!(POWER[t]&&POWER[t].m);
 // Points of one event for player id that belong to a group (pass / def / shot). Goals count for 'shot', assists for 'pass'.
 function catPts(e,id,cat){
@@ -1242,8 +1255,8 @@ function inPlay(E){
 function activePowers(){const E=S.eng;if(!E||E.final)return [];const now=nowMin(E);
   return S.powers.map(p=>({p,left:p.from+POWER[p.type].dur-now})).filter(x=>x.left>0)}
 function activatePower(owner,type,target){
-  const E=S.eng;if(!inPlay(E)||inF10(E)||S.powers.some(p=>p.owner===owner&&p.type===type))return;
-  const shown=E.shown();const from=nowMin(E);
+  const E=S.eng;if(pwBlock(owner,E)||S.powers.some(p=>p.owner===owner&&p.type===type))return;
+  const shown=E.shown();const from=nowMin(E)+PW_DELAY;
   const ord=Math.max(from,...shown.map(e=>e.ord||0),...S.powers.map(p=>p.ord||0))+0.0001;
   const pw={owner,type,target:type==='shield'?null:target,from,ord,lbl:E.clock().min,seen:shown.map(e=>e.ord)};
   S.powers.push(pw);rebuildPwFeed();fx('power',{type,owner,target:pw.target});
@@ -1292,7 +1305,7 @@ function powerAdjust(){
   return {adj,per};
 }
 function cpuPowers(){
-  const E=S.eng;if(S.mode!=='cpu'||!inPlay(E))return;const now=nowMin(E);
+  const E=S.eng;if(S.mode!=='cpu'||pwBlock(1,E))return;const now=nowMin(E);
   PTYPES.forEach(type=>{
     if(S.powers.some(p=>p.owner===1&&p.type===type)||now<S.cpuPlan[type])return;
     if(type==='shield'){activatePower(1,'shield',null);return}
@@ -2205,7 +2218,7 @@ const PTS_ROWS=[
 function ptsTableHtml(){
   const v=x=>typeof x==='number'?x:STATBY[x][3],n=x=>x>0?'+'+x:'−'+(-x);
   return `<h3>How points work</h3>`+PTS_ROWS.map(([h,rows])=>`<div class="pgrp">${h}</div><div class="ptable">${rows.map(([l,x])=>`<span>${l}</span><span class="${v(x)>0?'pos':'neg'}">${n(v(x))}</span>`).join('')}</div>`).join('')
-    +`<h3 style="margin-top:14px">Power-ups</h3><div class="ptable">${PTYPES.map(t=>`<span>${POWER[t].icon} ${POWER[t].label}: ${POWER[t].desc}</span><span>${POWER[t].dur} min</span>`).join('')}<span>⚽ Half-time penalties: the winner scores ×2 on both players</span><span>46′–50′</span></div>`;
+    +`<h3 style="margin-top:14px">Power-ups</h3><div class="ptable">${PTYPES.map(t=>`<span>${POWER[t].icon} ${POWER[t].label}: ${POWER[t].long}</span><span>${POWER[t].dur} min</span>`).join('')}<span>⚽ Half-time penalties: the winner scores ×2 on both players</span><span>46′–50′</span></div>`;
 }
 function viewRules(){
   app.innerHTML=`<section class="screen"><div><div class="eyebrow">Rules</div><h2 style="font-size:2.4rem;text-transform:uppercase">How to play</h2></div>
@@ -2214,7 +2227,7 @@ function viewRules(){
     <div class="note"><b>🔥 Final 10′.</b> From the 80th minute every point counts double, and power-ups can no longer be used. Your swap still works.</div>
     <div class="rules">
       ${ptsTableHtml()}
-      <p class="small muted" style="margin:10px 0 0">Each of you gets one of each per match, plus one ⇄ Swap: take one of your players out and bring in anyone on the pitch. Points already earned stay. If your player is subbed off, the player coming on takes his place automatically. Use them while the ball is in play. Timing is in match minutes.</p>
+      <p class="small muted" style="margin:10px 0 0">Each of you chooses 2 power-ups per match. A power-up starts 3 minutes after you tap it, and you can't tap one within 3 minutes of a card or VAR check, so nobody can use one just before a penalty. You also get one ⇄ Trade: take one of your players out and bring in anyone on the pitch. Points already earned stay. If your player is subbed off, the player coming on takes his place automatically. Timing is in match minutes.</p>
       <p class="small muted" style="margin:10px 0 0">Both of you can pick the same player. Pick before kickoff. Finished real matches are replayed minute by minute.</p>
     </div>
   </section>`;

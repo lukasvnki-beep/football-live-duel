@@ -224,6 +224,21 @@ Sings the winner's club anthem on video|Chante l'hymne du club du gagnant en vid
 Double Points|Points doublés|Puntos dobles
 One of your players scores ×2 for 10 min|Un de tes joueurs marque ×2 pendant 10 min|Uno de tus jugadores puntúa ×2 durante 10 min
 Shield|Bouclier|Escudo
+Each of you chooses 2 power-ups per match. A power-up starts 3 minutes after you tap it, and you can't tap one within 3 minutes of a card or VAR check, so nobody can use one just before a penalty. You also get one ⇄ Trade: take one of your players out and bring in anyone on the pitch. Points already earned stay. If your player is subbed off, the player coming on takes his place automatically. Timing is in match minutes.|Chacun choisit 2 power-ups par match. Un power-up démarre 3 minutes après avoir appuyé, et tu ne peux pas en lancer un dans les 3 minutes après un carton ou une VAR, donc personne ne peut l’utiliser juste avant un penalty. Tu as aussi un ⇄ Échange : sors un de tes joueurs et fais entrer n’importe qui sur le terrain. Les points déjà gagnés restent. Si ton joueur est remplacé, celui qui entre prend sa place automatiquement. Le temps est en minutes de match.|Cada uno elige 2 poderes por partido. Un poder empieza 3 minutos después de pulsarlo, y no puedes usar uno en los 3 minutos después de una tarjeta o del VAR, así nadie puede usarlo justo antes de un penalti. También tienes un ⇄ Cambio: saca a uno de tus jugadores y mete a cualquiera que esté en el campo. Los puntos ya ganados se quedan. Si cambian a tu jugador, el que entra ocupa su lugar automáticamente. El tiempo va en minutos de partido.
+Choose 2 power-ups per match. Each one starts 3 minutes after you tap it, so nobody can use one just before a penalty. Not from the 80th minute.|Choisis 2 power-ups par match. Chacun démarre 3 minutes après avoir appuyé, donc personne ne peut l’utiliser juste avant un penalty. Pas à partir de la 80e minute.|Elige 2 poderes por partido. Cada uno empieza 3 minutos después de pulsarlo, así nadie puede usarlo justo antes de un penalti. No desde el minuto 80.
+×2 on one player|×2 sur un joueur|×2 en un jugador
+No minus points|Aucun point négatif|Sin puntos negativos
+×3 on passing|×3 sur les passes|×3 en pases
+×3 on defending|×3 en défense|×3 en defensa
+×3 on shots and goals|×3 sur les tirs et les buts|×3 en tiros y goles
+⚡ Double Points: everything your chosen player earns counts double|⚡ Points doublés : tout ce que gagne ton joueur choisi compte double|⚡ Puntos dobles: todo lo que gana tu jugador elegido cuenta doble
+🎯 Pass Master: ×3 on passes, key passes and assists|🎯 Maître passeur : ×3 sur les passes, passes clés et passes décisives|🎯 Maestro del pase: ×3 en pases, pases clave y asistencias
+🧱 The Wall: ×3 on tackles, interceptions, blocks, duels won and saves|🧱 Le Mur : ×3 sur les tacles, interceptions, contres, duels gagnés et arrêts|🧱 El Muro: ×3 en entradas, intercepciones, bloqueos, duelos ganados y paradas
+💥 Sniper: ×3 on shots and goals|💥 Sniper : ×3 sur les tirs et les buts|💥 Francotirador: ×3 en tiros y goles
+starts in|démarre dans|empieza en
+Paused: card or VAR just now|En pause : carton ou VAR à l’instant|En pausa: tarjeta o VAR ahora mismo
+You used your 2 power-ups|Tu as utilisé tes 2 power-ups|Ya usaste tus 2 poderes
+Practice match|Match d’entraînement|Partido de práctica
 🎯 Pass Master|🎯 Maître passeur|🎯 Maestro del pase
 🧱 The Wall|🧱 Le Mur|🧱 El Muro
 💥 Sniper|💥 Sniper|💥 Francotirador
@@ -573,6 +588,8 @@ Your plan|Ton offre|Tu plan
     [/^(.+) vs (.+)$/g, '$1 contre $2', '$1 contra $2'],
     [/(\d+)′ (goal|assist|yellow|red|own goal|stats|VAR cancel|2nd yellow) /g, (l, m, w) => ({ fr: { goal: 'but', assist: 'passe déc.', yellow: 'jaune', red: 'rouge', 'own goal': 'csc', stats: 'stats', 'VAR cancel': 'VAR annulé', '2nd yellow': '2e jaune' }, es: { goal: 'gol', assist: 'asist.', yellow: 'amarilla', red: 'roja', 'own goal': 'p. propia', stats: 'stats', 'VAR cancel': 'VAR anulado', '2nd yellow': '2.ª amarilla' } })[l][w]],
     [/ · next in (\S+)/g, ' · suivante dans $1', ' · siguiente en $1'],
+    [/^Tap to use · (\d+) min$/g, 'Appuie pour utiliser · $1 min', 'Pulsa para usar · $1 min'],
+    [/^Starts in (\d+)′$/g, 'Démarre dans $1′', 'Empieza en $1′'],
     [/^Pick (\d) more$/g, 'Encore $1 à choisir', 'Elige $1 más'],
     [/^(\d+)\/(\d+) unlocked$/g, '$1/$2 débloqués', '$1/$2 desbloqueadas']
   ];
