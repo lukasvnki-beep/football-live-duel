@@ -1316,7 +1316,8 @@ function doSwap(owner,k,inId){
 }
 // Players who can come in with a swap: on the pitch right now when lineups are known
 function swapPool(owner){
-  const f=S.fixture,E=S.eng,mine=new Set(current(owner));
+  // Nobody can take a player another duelist already has (same rule as the draft)
+  const f=S.fixture,E=S.eng,mine=new Set(ALL().flatMap(j=>current(j)));
   const all=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].filter(id=>!mine.has(id)&&!(E.sentOff&&E.sentOff.has(id)));
   const starters=new Set(all.filter(id=>PL[id].starter));
   const ord={FWD:0,MID:1,DEF:2,GK:3,'':4},sorted=l=>l.sort((a,b)=>(PL[a].team===PL[b].team?0:PL[a].team===f.home?-1:1)||(ord[PL[a].pos]??4)-(ord[PL[b].pos]??4));
