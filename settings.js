@@ -213,6 +213,33 @@ Sings the winner's club anthem on video|Chante l'hymne du club du gagnant en vid
 Double Points|Points doublés|Puntos dobles
 One of your players scores ×2 for 10 min|Un de tes joueurs marque ×2 pendant 10 min|Uno de tus jugadores puntúa ×2 durante 10 min
 Shield|Bouclier|Escudo
+🎯 Pass Master|🎯 Maître passeur|🎯 Maestro del pase
+🧱 The Wall|🧱 Le Mur|🧱 El Muro
+💥 Sniper|💥 Sniper|💥 Francotirador
+Pass Master|Maître passeur|Maestro del pase
+The Wall|Le Mur|El Muro
+Sniper|Sniper|Francotirador
+×3 on passes, key passes and assists for 10 min|×3 sur les passes, passes clés et passes décisives pendant 10 min|×3 en pases, pases clave y asistencias durante 10 min
+×3 on tackles, interceptions, blocks, duels won and saves for 10 min|×3 sur les tacles, interceptions, contres, duels gagnés et arrêts pendant 10 min|×3 en entradas, intercepciones, bloqueos, duelos ganados y paradas durante 10 min
+×3 on shots and goals for 10 min|×3 sur les tirs et les buts pendant 10 min|×3 en tiros y goles durante 10 min
+⚡ Double Points: One of your players scores ×2 for 10 min|⚡ Points doublés : un de tes joueurs marque ×2 pendant 10 min|⚡ Puntos dobles: uno de tus jugadores puntúa ×2 durante 10 min
+🛡 Shield: Your players lose no points for 15 min|🛡 Bouclier : tes joueurs ne perdent aucun point pendant 15 min|🛡 Escudo: tus jugadores no pierden puntos durante 15 min
+🎯 Pass Master: ×3 on passes, key passes and assists for 10 min|🎯 Maître passeur : ×3 sur les passes, passes clés et passes décisives pendant 10 min|🎯 Maestro del pase: ×3 en pases, pases clave y asistencias durante 10 min
+🧱 The Wall: ×3 on tackles, interceptions, blocks, duels won and saves for 10 min|🧱 Le Mur : ×3 sur les tacles, interceptions, contres, duels gagnés et arrêts pendant 10 min|🧱 El Muro: ×3 en entradas, intercepciones, bloqueos, duelos ganados y paradas durante 10 min
+💥 Sniper: ×3 on shots and goals for 10 min|💥 Sniper : ×3 sur les tirs et les buts pendant 10 min|💥 Francotirador: ×3 en tiros y goles durante 10 min
+Use it on which of your players?|Sur lequel de tes joueurs ?|¿En cuál de tus jugadores?
+📋 Points table|📋 Barème des points|📋 Tabla de puntos
+Attack|Attaque|Ataque
+Passing|Passes|Pases
+Defending|Défense|Defensa
+Goalkeeper|Gardien|Portero
+Mistakes|Erreurs|Errores
+Block (shot or pass blocked)|Contre (tir ou passe bloqué)|Bloqueo (tiro o pase bloqueado)
+Goal conceded (goalkeeper)|But encaissé (gardien)|Gol encajado (portero)
+Failed dribble|Dribble raté|Regate fallido
+Offside|Hors-jeu|Fuera de juego
+Dribbled past by an opponent|Dribblé par un adversaire|Regateado por un rival
+Penalty conceded|Penalty concédé|Penalti cometido
 Your players lose no points for 15 min|Tes joueurs ne perdent aucun point pendant 15 min|Tus jugadores no pierden puntos durante 15 min
 ⚽ +1 ×2 from the penalties: both your players, 46′–50′|⚽ +1 ×2 grâce aux tirs au but : tes deux joueurs, de 46′ à 50′|⚽ +1 ×2 por los penaltis: tus dos jugadores, del 46′ al 50′
 Half time|Mi-temps|Descanso
@@ -539,6 +566,9 @@ Your plan|Ton offre|Tu plan
     [/^(\d+)\/(\d+) unlocked$/g, '$1/$2 débloqués', '$1/$2 desbloqueadas']
   ];
 
+  // Player stat lines ("+2 completed passes, 1 tackle +4")
+  const STATW = {"completed pass": ["passe réussie", "pase completado"], "completed passes": ["passes réussies", "pases completados"], "missed pass": ["passe ratée", "pase fallado"], "missed passes": ["passes ratées", "pases fallados"], "key pass": ["passe clé", "pase clave"], "key passes": ["passes clés", "pases clave"], "shot on target": ["tir cadré", "tiro a puerta"], "shots on target": ["tirs cadrés", "tiros a puerta"], "shot off target": ["tir non cadré", "tiro fuera"], "shots off target": ["tirs non cadrés", "tiros fuera"], "successful dribble": ["dribble réussi", "regate exitoso"], "successful dribbles": ["dribbles réussis", "regates exitosos"], "failed dribble": ["dribble raté", "regate fallido"], "failed dribbles": ["dribbles ratés", "regates fallidos"], "tackle": ["tacle", "entrada"], "tackles": ["tacles", "entradas"], "interception": ["interception", "intercepción"], "interceptions": ["interceptions", "intercepciones"], "block": ["contre", "bloqueo"], "blocks": ["contres", "bloqueos"], "duel won": ["duel gagné", "duelo ganado"], "duels won": ["duels gagnés", "duelos ganados"], "time dribbled past": ["fois dribblé", "vez regateado"], "times dribbled past": ["fois dribblé", "veces regateado"], "foul won": ["faute obtenue", "falta recibida"], "fouls won": ["fautes obtenues", "faltas recibidas"], "foul committed": ["faute commise", "falta cometida"], "fouls committed": ["fautes commises", "faltas cometidas"], "offside": ["hors-jeu", "fuera de juego"], "offsides": ["hors-jeu", "fueras de juego"], "save": ["arrêt", "parada"], "saves": ["arrêts", "paradas"], "goal conceded (keeper)": ["but encaissé (gardien)", "gol encajado (portero)"], "goals conceded (keeper)": ["buts encaissés (gardien)", "goles encajados (portero)"], "penalty won": ["penalty obtenu", "penalti provocado"], "penalties won": ["penaltys obtenus", "penaltis provocados"], "penalty conceded": ["penalty concédé", "penalti cometido"], "penalties conceded": ["penaltys concédés", "penaltis cometidos"], "penalty missed": ["penalty raté", "penalti fallado"], "penalties missed": ["penaltys ratés", "penaltis fallados"], "penalty saved": ["penalty arrêté", "penalti parado"], "penalties saved": ["penaltys arrêtés", "penaltis parados"], "goal": ["but", "gol"], "goals": ["buts", "goles"], "assist": ["passe décisive", "asistencia"], "assists": ["passes décisives", "asistencias"], "own goal": ["csc", "gol en propia"], "power-ups": ["bonus", "poderes"]};
+  const STATRX = new RegExp('(^|, | · |[+−-]?\\d+ )(' + ["goals conceded (keeper)", "goal conceded (keeper)", "successful dribbles", "times dribbled past", "successful dribble", "time dribbled past", "penalties conceded", "completed passes", "shots off target", "penalty conceded", "penalties missed", "shots on target", "shot off target", "failed dribbles", "fouls committed", "penalties saved", "completed pass", "shot on target", "failed dribble", "foul committed", "penalty missed", "missed passes", "interceptions", "penalties won", "penalty saved", "interception", "missed pass", "penalty won", "key passes", "duels won", "fouls won", "power-ups", "key pass", "duel won", "foul won", "offsides", "own goal", "tackles", "offside", "assists", "tackle", "blocks", "assist", "block", "saves", "goals", "save", "goal"].map(w => w.replace(/[()]/g, '\\$&')).join('|') + ')(?=$|,| [+−]| ·)', 'g');
   const SUP = ['en', 'fr', 'es'];
   const COL = { fr: 1, es: 2 };
   const EXACT = { fr: new Map(), es: new Map() };
@@ -582,6 +612,7 @@ Your plan|Ton offre|Tu plan
       const hold = v => '\u0002' + (keep.push(v) - 1) + '\u0003';
       out = m[2];
       PATTERNS.forEach(p => { p[0].lastIndex = 0; if (p[0].test(out)) { p[0].lastIndex = 0; out = out.replace(p[0], (...a) => typeof p[1] === 'function' ? hold(a[0].replace(/(\d+′ )(.+?)( )$/, (_, x, w, y) => x + p[1](lang, a[1], a[2]) + y)) : hold(p[c].replace(/\$(\d)/g, (_, i) => { const g = a[+i]; const x = map.get(norm(g)); return x == null ? g : x; }))); } });
+      out = out.replace(STATRX, (x, pre, w) => /\d/.test(pre) ? pre + hold(STATW[w][c - 1]) : x);
       for (const f of FRAGS) if (out.includes(f[0])) out = out.split(f[0]).join(hold(f[c]));
       if (out.includes(' · ')) out = out.split(' · ').map(x => { const y = map.get(norm(x)); return y == null ? x : y; }).join(' · ');
       out = out.replace(/\u0002(\d+)\u0003/g, (_, i) => keep[+i]);
