@@ -109,6 +109,19 @@ Play solo against the computer.|Joue seul contre l'ordinateur.|Juega solo contra
 Your name|Ton nom|Tu nombre
 Player 1|Joueur 1|Jugador 1
 Player 2|Joueur 2|Jugador 2
+Player 3|Joueur 3|Jugador 3
+Player 4|Joueur 4|Jugador 4
+Players|Joueurs|Jugadores
+Draft order|Ordre de choix|Orden de elección
+Drawing…|Tirage au sort…|Sorteo…
+picks first!|choisit en premier !|¡elige primero!
+Order:|Ordre :|Orden:
+picks again!|rechoisit tout de suite !|¡vuelve a elegir!
+Everyone has 2 players. Forfeits are only for 2-player duels.|Tout le monde a 2 joueurs. Les gages, c'est seulement pour les duels à 2.|Todos tienen 2 jugadores. Las prendas son solo para duelos de 2.
+It's a tie|Égalité|Empate
+Play again|Rejouer|Jugar otra vez
+3 players|3 joueurs|3 jugadores
+4 players|4 joueurs|4 jugadores
 Create duel & invite|Créer le duel et inviter|Crear duelo e invitar
 Start duel|Lancer le duel|Empezar duelo
 Close|Fermer|Cerrar

@@ -177,6 +177,22 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .chip{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .chip.p1{background:rgba(100,239,176,.16);color:var(--accent)}
 .chip.p2{background:rgba(255,215,124,.16);color:var(--gold)}
+.chip.p3{background:rgba(124,196,255,.16);color:#7cc4ff}
+.chip.p4{background:rgba(255,154,213,.16);color:#ff9ad5}
+.mchips{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:4px}
+.duel.multi .side:nth-child(odd){border-left:0}
+.duel.multi .side:nth-child(n+3){border-top:1px solid var(--line)}
+.npick{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
+.npick button{flex:1;padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:inherit;font-weight:800;font-size:1rem}
+.npick button[aria-pressed="true"]{border-color:var(--accent);background:rgba(100,239,176,.14);color:var(--accent)}
+.drawlist{list-style:none;margin:0 auto;padding:0;display:flex;flex-direction:column;gap:6px;width:min(280px,100%)}
+.drawlist li{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;opacity:.6;transition:opacity .3s,transform .3s}
+.drawlist li.show{opacity:1;transform:scale(1.03)}
+.drawlist .dn{font-family:var(--display);font-weight:800;color:var(--muted);width:1.2em}
+.podium{display:flex;flex-direction:column;gap:6px}
+.prank{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.prank.top{border-color:rgba(255,215,124,.5)}
+.prank .m{width:1.6em;font-size:1.2rem}.prank b{flex:1}
 .chip.neg{filter:saturate(1.3)}
 .empty{color:var(--muted);text-align:center;padding:18px;font-size:.9rem;border:1px dashed var(--line);border-radius:14px}
 .fresh{font-size:.72rem;color:var(--muted);text-align:center}
@@ -605,7 +621,7 @@ function fxStatus(f){
 // ================= App state =================
 const S={
   view:'home',src:store.get('fld.src','real'),mode:store.get('fld.mode','friend'),
-  names:store.get('fld.names',['You','Friend']),
+  names:store.get('fld.names',['You','Friend']),np:store.get('fld.np',2),
   day:store.get('fld.day',null),topOnly:store.get('fld.top',true),
   fixtures:null,fxErr:null,fxLoading:false,left:null,
   fixture:null,picks:[[],[]],turn:0,first:0,filter:'all',draftErr:null,draftLoading:false,
@@ -647,7 +663,14 @@ const crest=(tid,cls='')=>{const L=clubLook(tid),id='cs'+hash(tid+L.c1+L.c2+cls)
   return `<span class="crest ${cls}" aria-hidden="true"><svg viewBox="0 0 40 46"><defs><clipPath id="${id}"><path d="M20 1.5 37.5 6v15c0 11-7.4 19.4-17.5 23.5C9.9 40.4 2.5 32 2.5 21V6Z"/></clipPath></defs>
     <g clip-path="url(#${id})"><rect width="40" height="46" fill="${L.c1}"/><path d="M0 33 40 25V46H0Z" fill="${L.c2}"/></g>
     <path d="M20 1.5 37.5 6v15c0 11-7.4 19.4-17.5 23.5C9.9 40.4 2.5 32 2.5 21V6Z" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.4"/></svg><b style="color:${ink}">${esc(L.ab)}</b></span>`};
-const pname=i=>i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||(S.mode==='online'?'your friend':'Friend')));
+const pname=i=>i>=2?(S.names[i]||'Player '+(i+1)):i===0?(S.names[0]||'You'):(S.mode==='cpu'?'Computer':(S.names[1]||(S.mode==='online'?'your friend':'Friend')));
+// Same phone with 3 or 4 players (online and computer stay 2 players)
+const NP=()=>S.mode==='friend'?Math.min(4,Math.max(2,S.np||2)):2;
+const ALL=()=>[...Array(NP()).keys()];
+const multi=()=>NP()>2;
+const PCOL=['var(--accent)','var(--gold)','#7cc4ff','#ff9ad5'];
+function holderOf(id){return ALL().find(j=>segsOf(j).some(g=>g.id===id))}
+function shuffled(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 const backBtn=`<button class="back" id="back" aria-label="Back to matches"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></button>`;
 
 function go(view){S.view=view;if(view==='live'&&S.reactEng!==S.eng){S.reactEng=S.eng;S.reactSeen=null;S.reactInit=false}if(!['wait','reveal','live','join','flip','draft'].includes(view)&&S.syncT){clearInterval(S.syncT);S.syncT=null}
@@ -723,7 +746,7 @@ function openModeSheet(f){
   closeModeSheet();
   const sim=f.kind==='sim',fin=FINAL.has(f.status);
   const onlineOk=!sim&&!fin;
-  let mode=S.mode==='online'&&!onlineOk?'friend':S.mode;
+  let mode=S.mode==='online'&&!onlineOk?'friend':S.mode,np=Math.min(4,Math.max(2,S.np||2));
   const sc=document.createElement('div');sc.id='mscrim';sc.className='scrim';sc.onclick=closeModeSheet;
   const sh=document.createElement('div');sh.id='msheet';sh.className='sheet modesheet';sh.setAttribute('role','dialog');sh.setAttribute('aria-label','How do you want to play?');
   document.body.append(sc,sh);
@@ -739,13 +762,16 @@ function openModeSheet(f){
       <div class="names">
         <div class="field"><label for="mn1">${mode==='online'||mode==='cpu'?'Your name':'Player 1'}</label><input id="mn1" maxlength="14" value="${esc(S.names[0]==='You'?'':S.names[0])}" placeholder="You"></div>
         ${mode==='friend'?`<div class="field"><label for="mn2">Player 2</label><input id="mn2" maxlength="14" value="${esc(S.names[1]==='Friend'?'':S.names[1])}" placeholder="Friend"></div>`:''}
+        ${mode==='friend'?[2,3].filter(k=>k<np).map(k=>`<div class="field"><label for="mn${k+1}">Player ${k+1}</label><input id="mn${k+1}" maxlength="14" value="${esc(S.names[k]&&S.names[k]!=='Player '+(k+1)?S.names[k]:'')}" placeholder="Player ${k+1}"></div>`).join(''):''}
       </div>
+      ${mode==='friend'?`<div class="npick" role="group" aria-label="Number of players"><span class="small muted">Players</span>${[2,3,4].map(k=>`<button data-np="${k}" aria-pressed="${np===k}">${k}</button>`).join('')}</div>`:''}
       <button class="btn" id="mgo" style="width:100%">${mode==='online'?'Create duel & invite':'Start duel'}</button>`;
     sh.querySelector('[data-close]').onclick=closeModeSheet;
     sh.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{save();mode=b.dataset.mode;draw()});
-    sh.querySelector('#mgo').onclick=()=>{save();S.mode=mode;store.set('fld.mode',mode);S.src=sim?'sim':'real';buzz(20);closeModeSheet();startDuel(f)};
+    sh.querySelectorAll('[data-np]').forEach(b=>b.onclick=()=>{save();np=+b.dataset.np;buzz(8);draw()});
+    sh.querySelector('#mgo').onclick=()=>{save();S.mode=mode;S.np=mode==='friend'?np:2;store.set('fld.np',S.np);store.set('fld.mode',mode);S.src=sim?'sim':'real';buzz(20);closeModeSheet();startDuel(f)};
   };
-  const save=()=>{const a=sh.querySelector('#mn1'),b=sh.querySelector('#mn2');if(a)S.names[0]=a.value.trim()||'You';if(b)S.names[1]=b.value.trim()||'Friend';store.set('fld.names',S.names)};
+  const save=()=>{const a=sh.querySelector('#mn1'),b=sh.querySelector('#mn2');if(a)S.names[0]=a.value.trim()||'You';if(b)S.names[1]=b.value.trim()||'Friend';[2,3].forEach(k=>{const c=sh.querySelector('#mn'+(k+1));if(c)S.names[k]=c.value.trim()||'Player '+(k+1)});store.set('fld.names',S.names)};
   draw();
 }
 function closeModeSheet(){document.getElementById('msheet')?.remove();document.getElementById('mscrim')?.remove()}
@@ -772,9 +798,10 @@ function startDuel(f,firstPicker=0){
   stopTimer();
   if(S.mode==='online'&&!S.joining){startOnline(f);return}
   S.joining=false;
-  S.fixture=f;S.picks=[[],[]];S.capt=[0,0];S.swaps=[];S.dares=['',''];S.dareOk=[false,false];S.turn=S.mode==='cpu'?0:S.mode==='online'?(S.online?S.online.slot:0):firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
+  S.fixture=f;S.picks=ALL().map(()=>[]);S.capt=ALL().map(()=>0);S.swaps=[];S.dares=ALL().map(()=>'');S.dareOk=ALL().map(()=>false);S.turn=S.mode==='cpu'?0:S.mode==='online'?(S.online?S.online.slot:0):firstPicker;S.first=S.turn;S.filter='all';S.eng=null;S.draftErr=null;
   S.ldraft=null;
-  if(S.mode==='friend'){S.ldraft={first:Math.random()<.5?0:1,order:[]};S.turn=S.ldraft.first;S.first=S.turn;go('lflip')}else go('draft');
+  if(S.mode==='friend'&&multi()){const seq=shuffled(ALL());S.ldraft={first:seq[0],seq,order:[]};S.turn=seq[0];S.first=seq[0];go('lflip')}
+  else if(S.mode==='friend'){S.ldraft={first:Math.random()<.5?0:1,order:[]};S.turn=S.ldraft.first;S.first=S.turn;go('lflip')}else go('draft');
   if(f.kind==='real'&&!(SQUAD[f.home]&&SQUAD[f.home].length&&SQUAD[f.away]&&SQUAD[f.away].length))loadPlayers(f);
 }
 async function loadPlayers(f){
@@ -905,7 +932,30 @@ function viewDraftOnline(){
 }
 
 // ================= Same phone: coin toss, then picks alternate (A, B, A, B) =================
+function viewLocalFlipMulti(){
+  const seq=S.ldraft.seq,snake=[...seq,...seq.slice().reverse()];
+  app.innerHTML=`<section class="screen flipscr">
+    <div class="eyebrow" style="text-align:center">${esc(TEAMS[S.fixture.home].short)} vs ${esc(TEAMS[S.fixture.away].short)} · Same phone · ${seq.length} players</div>
+    <h2 style="text-align:center;font-size:2.2rem;text-transform:uppercase">Draft order</h2>
+    <div class="coinwrap"><div class="coin h"><div class="face f0"><span id="cl">?</span></div><div class="face f1"><span>?</span></div></div></div>
+    <ol class="drawlist" id="drawlist">${seq.map((_,k)=>`<li><span class="dn">${k+1}</span><b data-dk="${k}">…</b></li>`).join('')}</ol>
+    <p class="fliptxt" id="fliptxt">Drawing…</p>
+    <button class="btn" id="lgo" style="visibility:hidden">Start the draft</button>
+  </section>`;
+  buzz(20);sfx('flip');
+  const names=ALL().map(pname);let k=0;
+  const spin=setInterval(()=>{if(S.view!=='lflip'){clearInterval(spin);return}const el=app.querySelector(`[data-dk="${k}"]`);if(el)el.textContent=names[Math.floor(Math.random()*names.length)];const cl=document.getElementById('cl');if(cl)cl.textContent=String(k+1)},90);
+  const reveal=()=>{if(S.view!=='lflip'){clearInterval(spin);return}
+    const el=app.querySelector(`[data-dk="${k}"]`);if(el){el.textContent=names[seq[k]];el.style.color=PCOL[seq[k]];el.parentNode.classList.add('show')}
+    buzz(30);sfx('pick');k++;
+    if(k<seq.length){setTimeout(reveal,700);return}
+    clearInterval(spin);const t=document.getElementById('fliptxt');buzz([60,40,60]);
+    t.innerHTML=`<b>${esc(names[seq[0]])} picks first!</b><br><span>Order:</span> ${snake.map(i=>esc(names[i])).join(' → ')}`;t.classList.add('show');
+    const g=document.getElementById('lgo');g.style.visibility='visible';g.textContent=`${names[seq[0]]}, start picking`;g.onclick=()=>go('draft')};
+  setTimeout(reveal,1100);
+}
 function viewLocalFlip(){
+  if(multi()&&S.ldraft.seq)return viewLocalFlipMulti();
   const first=S.ldraft.first,nm=pname;
   app.innerHTML=`<section class="screen flipscr">
     <div class="eyebrow" style="text-align:center">${esc(TEAMS[S.fixture.home].short)} vs ${esc(TEAMS[S.fixture.away].short)} · Same phone</div>
@@ -921,8 +971,8 @@ function viewLocalFlip(){
     const g=document.getElementById('lgo');g.style.visibility='visible';g.textContent=`${nm(first)}, start picking`;g.onclick=()=>go('draft')},2300);
 }
 function viewDraftLocal(){
-  const f=S.fixture,d=S.ldraft,n=d.order.length,first=d.first,order=[first,1-first,first,1-first];
-  const turn=n>=4?-1:order[n],by={};d.order.forEach(x=>by[x.id]=x.s);
+  const f=S.fixture,d=S.ldraft,n=d.order.length,first=d.first,order=d.seq?[...d.seq,...d.seq.slice().reverse()]:[first,1-first,first,1-first],NT=order.length;
+  const turn=n>=NT?-1:order[n],by={};d.order.forEach(x=>by[x.id]=x.s);
   const ids=[...(SQUAD[f.home]||[]),...(SQUAD[f.away]||[])].filter(id=>S.filter==='all'||PL[id].team===S.filter);
   const list=ids.slice().sort((a,b)=>(by[a]!=null?1:0)-(by[b]!=null?1:0)||(f.kind==='real'?((PL[b].starter?1:0)-(PL[a].starter?1:0)||(PL[a].team===f.home?0:1)-(PL[b].team===f.home?0:1)||POSORDER[PL[a].pos]-POSORDER[PL[b].pos]):0));
   let body;
@@ -931,16 +981,17 @@ function viewDraftLocal(){
   else body=`<div class="plist">${list.map(id=>{const p=PL[id],t=by[id];return `
       <button class="prow ${t!=null?'taken':''}" data-p="${id}" aria-pressed="${t!=null}" ${t!=null||turn<0?'disabled':''}>
         ${shirt(id)}
-        <span class="nm"><b>${esc(p.name)}</b>${t!=null?`<span class="small" style="color:${t===0?'var(--accent)':'var(--gold)'}">Picked by ${esc(pname(t))}</span>`:p.form?`<span class="stars" aria-label="Form ${p.form} of 3">${'★'.repeat(p.form)}${'☆'.repeat(3-p.form)}</span>`:`<span class="small muted">${p.starter?'Starting':f.lineupsOut?'Bench':'Squad'} · ${esc(TEAMS[p.team].short)}</span>`}</span>
+        <span class="nm"><b>${esc(p.name)}</b>${t!=null?`<span class="small" style="color:${PCOL[t]}">Picked by ${esc(pname(t))}</span>`:p.form?`<span class="stars" aria-label="Form ${p.form} of 3">${'★'.repeat(p.form)}${'☆'.repeat(3-p.form)}</span>`:`<span class="small muted">${p.starter?'Starting':f.lineupsOut?'Bench':'Squad'} · ${esc(TEAMS[p.team].short)}</span>`}</span>
         <span class="badge">${p.pos||'–'}</span>
         <span class="check" aria-hidden="true">${t!=null?'✓':''}</span>
       </button>`}).join('')}</div>`;
-  const done=n>=4;
+  const done=n>=NT;
   app.innerHTML=`<section class="screen">
     <div class="topbar">${backBtn}<div class="t"><div class="eyebrow">${esc(TEAMS[f.home].short)} vs ${esc(TEAMS[f.away].short)} · Draft</div><h2>${done?'Draft complete':esc(pname(turn))+', your pick'}</h2></div></div>
     <div class="draftorder">${order.map((s2,k)=>{const pk=d.order[k];return `<div class="dslot ${s2===0?'me':''} ${k===n?'now':''}"><small>${k+1}. ${esc(pname(s2))}</small><b>${pk?esc(PL[pk.id].name):k===n?'Picking…':'—'}</b></div>`}).join('')}</div>
     ${n>0&&!done?'<button class="linkbtn" id="undo" style="align-self:flex-start;padding:0">↶ Undo last pick</button>':''}
-    ${done?[0,1].map(i=>`<div class="dare">
+    ${done&&d.seq?`<p class="small muted" style="margin:0">Everyone has 2 players. Forfeits are only for 2-player duels.</p>`:''}
+    ${done&&!d.seq?[0,1].map(i=>`<div class="dare">
       <label for="dare${i}"><b>🔒 ${esc(pname(i))}: forfeit for ${esc(pname(1-i))} if they lose</b> <span class="muted">(optional, ${esc(pname(1-i))} has to accept it)</span></label>
       <textarea id="dare${i}" data-di="${i}" maxlength="120" rows="2" placeholder="Leave empty to play just for fun">${esc(S.dares[i])}</textarea>
       <div class="dchips">${DARES.slice(0,3).map(x=>`<button class="dchip" data-dare="${i}|${esc(x)}">${esc(x)}</button>`).join('')}</div></div>`).join('')
@@ -958,7 +1009,8 @@ function viewDraftLocal(){
   app.querySelectorAll('.prow').forEach(b=>b.onclick=()=>{
     if(turn<0||by[b.dataset.p]!=null)return;
     d.order.push({s:turn,id:b.dataset.p});S.picks[turn].push(b.dataset.p);buzz(25);sfx('pick');S.filter='all';
-    const next=d.order.length<4?order[d.order.length]:-1;
+    const next=d.order.length<NT?order[d.order.length]:-1;
+    if(next===turn){toast(pname(turn)+' picks again!')}else
     if(next>=0){passOverlay(next)}viewDraft();window.scrollTo(0,0)});
   app.querySelectorAll('textarea[data-di]').forEach(t=>t.oninput=()=>{S.dares[+t.dataset.di]=t.value.trim()});
   app.querySelectorAll('[data-dare]').forEach(b=>b.onclick=()=>{const [i,x]=b.dataset.dare.split('|');S.dares[+i]=x;const t=document.getElementById('dare'+i);if(t)t.value=x});
@@ -992,7 +1044,7 @@ function viewPass(){
 }
 
 // ================= Reveal =================
-const SIDES=()=>{const L=S.mode==='online'&&S.online?S.online.slot:0;return [L,1-L]};
+const SIDES=()=>{if(multi())return ALL();const L=S.mode==='online'&&S.online?S.online.slot:0;return [L,1-L]};
 const canControl=i=>S.mode==='friend'||(S.mode==='cpu'&&i===0)||(S.mode==='online'&&S.online&&S.online.slot===i);
 function shirt(id){const p=PL[id]||{},c=TEAMS[p.team]?TEAMS[p.team].color:'#8899aa';const n=p.num!=null&&p.num!==''?String(p.num):(p.pos||'');
   return `<svg class="shirt" viewBox="0 0 64 56" aria-hidden="true"><path d="M21 3 9 9 2 22l10 5 3-5v32h34V22l3 5 10-5-7-13-12-6c-2 5-6 8-11 8s-9-3-11-8z" fill="${c}" stroke="rgba(0,0,0,.25)"/><text x="32" y="${n.length>2?39:41}" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="${n.length>2?13:18}" font-weight="800" fill="#06121f">${esc(n)}</text></svg>`}
@@ -1005,10 +1057,10 @@ function mstrip(){
 }
 function duelPanel(live){
   const E=S.eng,t=live?E.tally():null,a=live?powerAdjust():null;
-  const sc=live?[0,1].map(i=>sideScore(i,t,a)):null,tot=sc?sc.map(x=>x.total):[0,0];
-  const lead=tot[0]>tot[1]?0:tot[1]>tot[0]?1:-1;
+  const sc=live?ALL().map(i=>sideScore(i,t,a)):null,tot=sc?sc.map(x=>x.total):ALL().map(()=>0);
+  const mx=Math.max(...tot),lead=tot.filter(x=>x===mx).length===1?tot.indexOf(mx):-1;
   const act=live?activePowers():[],blk=blockedNegs(),ok=live&&inPlay(E),off=E&&E.sentOff?E.sentOff:new Set();
-  return `<div class="duel">${SIDES().map(i=>{
+  return `<div class="duel ${multi()?'multi':''}">${SIDES().map(i=>{
     const cur=live?current(i):S.picks[i];
     const cards=cur.map((id,k)=>{const p=PL[id];const cap=CAPTAIN&&(S.capt[i]||0)===k;
       let v=0,prev='';
@@ -1023,24 +1075,25 @@ function duelPanel(live){
         ${tags?`<div class="tags">${tags}</div>`:''}${prev?`<span class="prev">${prev}</span>`:''}
         ${live&&canControl(i)&&!swapUsed(i)&&!E.final?`<button class="swapbtn" data-swap="${i}:${k}" ${ok?'':'disabled'}>⇄ SWAP</button>`:''}
       </div>`}).join('');
-    return `<div class="side ${lead===i?'lead':''}"><div class="sh"><div class="who">${esc(pname(i))}</div><div class="tot num">${tot[i]<0?'−'+(-tot[i]):tot[i]}<small> pts</small></div></div>${cards}</div>`}).join('')}</div>`;
+    return `<div class="side ${lead===i?'lead':''}"><div class="sh"><div class="who"${multi()?` style="color:${PCOL[i]}"`:''}>${multi()&&live?['🥇','🥈','🥉','4.'][tot.filter(x=>x>tot[i]).length]+' ':''}${esc(pname(i))}</div><div class="tot num">${tot[i]<0?'−'+(-tot[i]):tot[i]}<small> pts</small></div></div>${cards}</div>`}).join('')}</div>`;
 }
 function pbar(){
-  const E=S.eng,act=activePowers(),blk=blockedNegs(),[L,R]=SIDES();
+  const E=S.eng,act=activePowers(),blk=blockedNegs(),sd=SIDES(),[L,R]=sd;
   const pills=i=>act.filter(x=>x.p.owner===i&&!blk.has(x.p)&&!blk.shields.has(x.p)).map(x=>{const P=POWER[x.p.type];
     return `<div class="pill ${x.p.type}"><b>${P.icon} ${P.label}</b>${x.p.target?esc(PL[x.p.target].name)+' · ':''}${x.left}′<div class="bar"><i style="width:${Math.round(100*x.left/P.dur)}%"></i></div></div>`}).join('');
-  const mine=S.mode==='friend'?S.powers.length:S.powers.filter(p=>p.owner===L).length,max=S.mode==='friend'?6:3;
-  return `<div class="pbar"><div class="pact">${pills(L)}</div><button class="pbtn" id="pwopen" ${E.final||inF10(E)?'disabled':''}><span class="i">${inF10(E)?'🔒':'⚡'}</span><span>Power-ups</span><small>${inF10(E)?'Locked':mine+'/'+max+' used'}</small></button><div class="pact r">${pills(R)}</div></div>`;
+  const mine=S.mode==='friend'?S.powers.length:S.powers.filter(p=>p.owner===L).length,max=S.mode==='friend'?3*NP():3;
+  const half=Math.ceil(sd.length/2),pl=a=>a.map(pills).join('');
+  return `<div class="pbar"><div class="pact">${pl(sd.slice(0,half))}</div><button class="pbtn" id="pwopen" ${E.final||inF10(E)?'disabled':''}><span class="i">${inF10(E)?'🔒':'⚡'}</span><span>Power-ups</span><small>${inF10(E)?'Locked':mine+'/'+max+' used'}</small></button><div class="pact r">${pl(sd.slice(half))}</div></div>`;
 }
 function powersSheet(){
   const E=S.eng,now=nowMin(E),lock=inF10(E),ok=inPlay(E)&&!lock;
-  const sides=[0,1].filter(canControl);
+  const sides=ALL().filter(canControl);
   return sides.map(i=>`<div class="pw"><h3>${esc(pname(i))}</h3><div class="pwrow">${PTYPES.map(type=>{
       const used=S.powers.find(p=>p.owner===i&&p.type===type),P=POWER[type];
       const left=used?used.from+P.dur-now:0,on=used&&left>0;
       const state=used?(on?`Active · ${left}′ left`:'Used'):lock?'Locked in the final 10′':ok?'Tap to use':'Wait for play';
       return `<button class="pwb ${type} ${on?'on':''}" data-pw="${i}:${type}" ${used||!ok?'disabled':''}><b>${P.icon} ${P.label}</b><span>${P.desc}</span><span class="st">${state}</span></button>`}).join('')}</div>
-    ${S.pwPick&&S.pwPick.owner===i?`<div class="pwpick"><span>${S.pwPick.type==='double'?'Double the points of which of your players?':'Flip the points of which of their players?'}</span><div class="tlist">${current(S.pwPick.type==='double'?i:1-i).map(id=>`<button data-pwt="${id}">${shirt(id)}<span><b>${esc(PL[id].name)}</b> <small>${esc(TEAMS[PL[id].team].short)}</small></span></button>`).join('')}</div><button class="linkbtn" data-pwx="1">Cancel</button></div>`:''}
+    ${S.pwPick&&S.pwPick.owner===i?`<div class="pwpick"><span>${S.pwPick.type==='double'?'Double the points of which of your players?':'Flip the points of which of their players?'}</span><div class="tlist">${(S.pwPick.type==='double'?[i]:multi()?ALL().filter(j=>j!==i):[1-i]).flatMap(j=>current(j).map(id=>[j,id])).map(([j,id])=>`<button data-pwt="${id}">${shirt(id)}<span><b>${esc(PL[id].name)}</b> <small>${esc(TEAMS[PL[id].team].short)}${multi()&&j!==i?' · '+esc(pname(j)):''}</small></span></button>`).join('')}</div><button class="linkbtn" data-pwx="1">Cancel</button></div>`:''}
   </div>`).join('')+`<p class="small muted" style="margin:0">Each power-up works once per match, and not from the 80th minute. Timing is in match minutes.</p>`;
 }
 function swapSheet(owner,k){
@@ -1097,15 +1150,16 @@ function rebuildPwFeed(){const blk=blockedNegs();S.pwFeed=[...S.powers.map(p=>({
 // A Shield blocks the first Negative Points the rival uses on you within 15 minutes of turning it on
 function blockedNegs(){const out=new Set(),used=new Set();
   S.powers.filter(p=>p.type==='neg').sort((a,b)=>a.ord-b.ord).forEach(n=>{
-    const sh=S.powers.find(s=>s.type==='shield'&&s.owner!==n.owner&&!used.has(s)&&s.ord<n.ord&&n.from<s.from+POWER.shield.dur);
+    const vic=multi()?holderOf(n.target):1-n.owner;
+    const sh=S.powers.find(s=>s.type==='shield'&&s.owner!==n.owner&&s.owner===vic&&!used.has(s)&&s.ord<n.ord&&n.from<s.from+POWER.shield.dur);
     if(sh){used.add(sh);out.add(n)}});
   out.shields=used;return out}
 function powerAdjust(){
-  const E=S.eng,adj=[{},{}],per=S.powers.map(()=>0);
+  const E=S.eng,adj=ALL().map(()=>({})),per=S.powers.map(()=>0);
   if(!E||!S.powers.length)return {adj,per};
   const blk=blockedNegs();
   E.shown().filter(e=>!e.spread&&e.el!=null).forEach(e=>{for(const id in e.pts){const v=e.pts[id];if(!v)continue;
-    [0,1].forEach(side=>{
+    ALL().forEach(side=>{
       const act=S.powers.map((p,k)=>[p,k]).filter(([p])=>p.target===id&&!blk.has(p)&&(p.type==='double'?p.owner===side:p.owner!==side)&&e.el>=p.from&&e.el<p.from+POWER[p.type].dur&&!p.seen.includes(e.ord));
       if(!act.length)return;
       let val=v;const dbl=act.find(([p])=>p.type==='double'),neg=act.find(([p])=>p.type==='neg');
@@ -1121,7 +1175,7 @@ function powerAdjust(){
       const ov=Math.max(0,Math.min(end,p.from+POWER[p.type].dur)-Math.max(start,p.from));if(!ov)return;
       const v=Math.round(sp*ov/st.minutes);
       const d=p.type==='double'?v:(v>0?-2*v:0);if(!d)return;
-      const side=p.type==='double'?p.owner:1-p.owner;per[k]+=d;adj[side][p.target]=(adj[side][p.target]||0)+d});
+      const side=p.type==='double'?p.owner:multi()?holderOf(p.target):1-p.owner;if(side==null)return;per[k]+=d;adj[side][p.target]=(adj[side][p.target]||0)+d});
   }
   return {adj,per};
 }
@@ -1167,7 +1221,7 @@ function penBonus(i){if(penWin()!==i)return 0;const E=S.eng;if(!E||!E.shown)retu
 // Sim / replay: the clock waits at half-time while the shootout is open (2 minutes at most)
 function penHold(E){return S.mode!=='online'&&atHT(E)&&!!S.pen&&!S.pen.res}
 // Open the offer at half-time, and settle it when the 2 minutes run out
-function penTick(){const E=S.eng;if(!E)return;
+function penTick(){const E=S.eng;if(!E||multi())return; // penalty shootout: 2-player duels only
   if(S.mode==='online'){const p=penOnline();if(p&&p.done&&!S.penSeen){S.penSeen=true;if(p.winner!=null){sfx('whistle');toast(`⚽ ${pname(p.winner)} won the penalty shootout: ×2 for 5 min`)}}return}
   if(!S.pen&&atHT(E)){S.pen={at:Date.now(),res:null};sfx('whistle');saveActive()}
   if(S.pen&&!S.pen.res&&Date.now()-S.pen.at>=PEN_MS){S.pen.res={winner:S.mode==='cpu'?1:null,late:true};closePen();saveActive();if(S.mode==='cpu')toast('⏱ Too late: the computer wins the penalty shootout')}
@@ -1306,14 +1360,15 @@ function viewReveal(){
 }
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
-  store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,capt:S.capt,swaps:S.swaps,htTot:S.htTot,pen:S.pen,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
+  store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:ALL().map(pname),np:NP(),mode:S.mode,
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:S.picks.flat().map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,capt:S.capt,swaps:S.swaps,htTot:S.htTot,pen:S.pen,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
   Object.assign(TEAMS,a.teams);a.players.forEach(p=>{if(!PL[p.id])PL[p.id]=p});
-  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];S.capt=a.capt||[0,0];S.swaps=a.swaps||[];S.htTot=a.htTot||null;S.pen=a.pen||null;rebuildPwFeed();
-  if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
+  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];S.capt=a.capt||a.picks.map(()=>0);S.swaps=a.swaps||[];S.htTot=a.htTot||null;S.pen=a.pen||null;rebuildPwFeed();
+  S.np=a.np||2;
+  if(a.mode==='friend')S.names=a.names.slice();else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status)&&!a.start,a.start);go('live');S.eng.start();
 }
@@ -1769,7 +1824,7 @@ function tick(){
   if(E.done){finishDuel();return}
   updateLive(before);
 }
-function totals(){const t=S.eng.tally(),a=powerAdjust();return [0,1].map(i=>sideScore(i,t,a).total)}
+function totals(){const t=S.eng.tally(),a=powerAdjust();return ALL().map(i=>sideScore(i,t,a).total)}
 function finishDuel(){
   stopTimer();const E=S.eng;if(!E.done)E.finish();
   if(E.saved)return;E.saved=true;E.stop();
@@ -1778,6 +1833,7 @@ function finishDuel(){
   const out=tot[me]>tot[1-me]?'W':tot[me]<tot[1-me]?'L':'D';
   if(S.online){store.del('fld.online');if(S.syncT){clearInterval(S.syncT);S.syncT=null}
     onlineFetch({body:{action:'final',code:S.online.code,token:S.online.token,tot}}).then(()=>{S.league=null}).catch(()=>{})}
+  if(multi()){if(f.kind==='real')store.del('fld.active');go('result');return}
   const a=powerAdjust(),pwGain=S.powers.reduce((x,p,k)=>x+(p.owner===me?(a.per[k]||0)*(p.type==='neg'?-1:1):0),0);
   S.history.unshift({at:Date.now(),names:[pname(me),pname(1-me)],tot:[tot[me],tot[1-me]],score:[t.hs,t.as],teams:[TEAMS[f.home].short,TEAMS[f.away].short],out,real:f.kind==='real',online:S.mode==='online',
     comeback:!!(S.htTot&&S.htTot[me]<S.htTot[1-me]&&out==='W'),pwGain,swap:swapUsed(me)});
@@ -1806,7 +1862,7 @@ function evText(e){
   return '';
 }
 function chips(e){
-  const c=[];[0,1].forEach(i=>{const v=sideEvPts(i,e);if(v)c.push(`<span class="chip p${i+1}">${esc(pname(i))} ${sign(v)}</span>`)});
+  const c=[];ALL().forEach(i=>{const v=sideEvPts(i,e);if(v)c.push(`<span class="chip p${i+1}">${esc(pname(i))} ${sign(v)}</span>`)});
   return c.join('');
 }
 function viewLive(){
@@ -1863,7 +1919,7 @@ function updateLive(before){
   const tot=totals();
   document.getElementById('mstrip').innerHTML=mstrip();
   document.getElementById('board').innerHTML=duelPanel(true);
-  if(before){const [L,R]=SIDES();[L,R].forEach((i,n)=>{if(before[i]!==tot[i]){const el=document.querySelectorAll('.duel .tot')[n];if(el)el.classList.add('bump')}})}
+  if(before){SIDES().forEach((i,n)=>{if(before[i]!==tot[i]){const el=document.querySelectorAll('.duel .tot')[n];if(el)el.classList.add('bump')}})}
   document.getElementById('pbar').innerHTML=pbar();
   // Half-time totals (for the comeback badge), Final 10' banner
   if(!S.htTot&&nowMatchMin(E)>=46)S.htTot=tot.slice();
@@ -1878,8 +1934,11 @@ function updateLive(before){
   const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*evMult(i,e);const [h,w]=evShort(e,i);
     return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
   document.getElementById('feed').innerHTML=ev.length?ev.map(e=>{
-    let on=[0,1].map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
+    let on=ALL().map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
     const mc=`<span class="mc">${esc(String(e.lbl||'').replace('′',''))}′</span>`;
+    if(multi()){const [h,w]=evShort(e,null);
+      const cs=(e.type==='power'||e.type==='swap')?`<span class="chip p${e.owner+1}">${esc(pname(e.owner))}</span>`:ALL().map(i=>{const v=sideEvPts(i,e)*evMult(i,e);return v?`<span class="chip p${i+1}">${esc(pname(i))} ${sign(v)}</span>`:''}).join('');
+      return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}${cs?'<div class="mchips">'+cs+'</div>':''}</div></div>`}
     if(!on[0]&&!on[1]){const [h,w]=evShort(e,null);return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}</div></div>`}
     return `<div class="tr ${e.type==='var'?'void':''}">${on[L]?cell(e,L,'l'):'<span></span>'}${mc}${on[R]?cell(e,R,'r'):'<span></span>'}</div>`}).join('')
     :`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':E.kind==='real'&&!E.replay&&!LIVE.has(E.status)&&!FINAL.has(E.status)?'Waiting for kickoff. Your players\' actions will show up here.':'Goals, assists and cards will show up here as they happen.'}</div>`;
@@ -1892,7 +1951,36 @@ function updateLive(before){
 }
 
 // ================= Result =================
+function viewResultMulti(){
+  const f=S.fixture,E=S.eng,t=E.tally(),a=powerAdjust(),tot=totals();
+  const rank=ALL().slice().sort((x,y)=>tot[y]-tot[x]),top=tot[rank[0]],winners=rank.filter(i=>tot[i]===top);
+  if(S.resSndFor!==E){S.resSndFor=E;sfx(winners.length>1?'draw':'win')}
+  const n=v=>v<0?'−'+(-v):v,medal=i=>['🥇','🥈','🥉','4.'][tot.filter(x=>x>tot[i]).length];
+  const sc=ALL().map(i=>sideScore(i,t,a));
+  const lines=i=>sc[i].rows.map((g,k)=>{const p=PL[g.id];const first=sc[i].rows.findIndex(r=>r.id===g.id)===k;const adj=first?sc[i].adjOf(g.id):0;
+    return `<div class="brow"><span>${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${g.pts+adj}</b><span class="why">${g.how==='sub'?'came on '+esc(g.fromLbl):g.how==='swap'?'swapped in at '+esc(g.fromLbl):''}</span></div>`}).join('')
+    +(sc[i].f10?`<div class="brow pwr"><span>🔥 Final 10′ (×2)</span><b class="num">${sign(sc[i].f10)}</b><span class="why"></span></div>`:'')
+    +S.powers.map((p,k)=>p.owner!==i?'':`<div class="brow pwr"><span>${POWER[p.type].icon} ${POWER[p.type].label}${p.target?' on '+esc(PL[p.target].name):''}</span><b class="num">${a.per[k]?sign(a.per[k]):'0'}</b><span class="why">Used at ${p.from}′${p.type==='neg'&&blockedNegs().has(p)?', blocked by a Shield':''}</span></div>`).join('');
+  app.innerHTML=`<section class="screen">
+    <div class="result">
+      <div class="trophy" aria-hidden="true">${winners.length>1?'🤝':'🏆'}</div>
+      <div class="eyebrow" style="color:var(--gold)">Full time · ${esc(TEAMS[f.home].short)} ${t.hs}–${t.as} ${esc(TEAMS[f.away].short)}</div>
+      <h2>${winners.length>1?'It\'s a tie':esc(pname(winners[0]))+' wins'}</h2>
+    </div>
+    <div class="podium">${rank.map(i=>`<div class="prank ${tot[i]===top?'top':''}"><span class="m">${medal(i)}</span><b style="color:${PCOL[i]}">${esc(pname(i))}</b><span class="num">${n(tot[i])} pts</span></div>`).join('')}</div>
+    ${rank.map(i=>`<div class="breakdown"><h3>${medal(i)} ${esc(pname(i))} · ${tot[i]} pts</h3>${lines(i)}</div>`).join('')}
+    <button class="linkbtn" id="copy">Copy result as text</button>
+  </section>
+  <div class="actionbar"><div><button class="btn ghost" id="home">New match</button><button class="btn" id="again">Play again</button></div></div>`;
+  document.getElementById('home').onclick=()=>go('home');
+  document.getElementById('again').onclick=()=>startDuel(f);
+  document.getElementById('copy').onclick=()=>{
+    const txt=`Football Live Duel (${TEAMS[f.home].name} ${t.hs}–${t.as} ${TEAMS[f.away].name}): `+rank.map((i,k)=>`${k+1}. ${pname(i)} ${tot[i]}`).join(', ');
+    try{navigator.clipboard.writeText(txt).then(()=>toast('Copied'),()=>toast(txt))}catch(e){toast(txt)}
+  };
+}
 function viewResult(){
+  if(multi())return viewResultMulti();
   const f=S.fixture,E=S.eng,t=E.tally(),a=powerAdjust(),tot=totals();
   const w=tot[0]>tot[1]?0:tot[1]>tot[0]?1:-1;
   if(S.resSndFor!==E){S.resSndFor=E;const me=S.mode==='online'&&S.online?S.online.slot:0;sfx(w<0?'draw':(w===me||S.mode==='friend')?'win':'lose')}
@@ -2056,8 +2144,8 @@ function reactToFeed(){
   const seen=S.reactSeen||(S.reactSeen=new Set());const first=!S.reactInit;S.reactInit=true;
   const me=S.mode==='online'&&S.online?S.online.slot:0;
   [...E.shown(),...S.pwFeed].forEach(e=>{const k=evKey(e)+'|'+(e.ptype||'')+(e.owner??'');if(seen.has(k))return;seen.add(k);if(first)return;
-    if(e.type==='goal'){const x2=!e.spread&&matchMin(e)>=F10?2:1,v=sideEvPts(me,e)*x2,o=sideEvPts(1-me,e)*x2;goalSound();buzz(v>0?[80,60,160]:o>0?[40]:[30]);
-      fx('goal',{text:(PL[e.player]?PL[e.player].name:'')+(v>0?` · +${v} for ${pname(me)==='You'?'you':pname(me)}`:o>0?` · +${o} for ${pname(1-me)}`:''),bad:o>0&&!(v>0)})}
+    if(e.type==='goal'){const x2=!e.spread&&matchMin(e)>=F10?2:1,v=sideEvPts(me,e)*x2,oi=ALL().filter(j=>j!==me).find(j=>sideEvPts(j,e)>0),o=oi!=null?sideEvPts(oi,e)*x2:0;goalSound();buzz(v>0?[80,60,160]:o>0?[40]:[30]);
+      fx('goal',{text:(PL[e.player]?PL[e.player].name:'')+(v>0?` · +${v} for ${pname(me)==='You'?'you':pname(me)}`:o>0?` · +${o} for ${pname(oi)}`:''),bad:o>0&&!(v>0)})}
     else if(e.type==='power'&&e.owner!==me&&S.mode==='online'){buzz([60,40,60]);fx('power',{type:e.ptype,owner:e.owner,target:e.player})}});
 }
 function hideSplash(){const sp=document.getElementById('splash');if(!sp||sp.classList.contains('out'))return;sp.classList.add('out');setTimeout(()=>sp.remove(),600)}
