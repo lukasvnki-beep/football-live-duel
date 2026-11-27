@@ -297,6 +297,8 @@ export default async function handler(req, res) {
       const type = ['double', 'shield', 'passer', 'wall', 'shot', 'swap'].includes(b.type) ? b.type : null;
       if (!type) return res.status(400).json({ error: 'Unknown power-up.' });
       if (d.powers.some(p => p.owner === slot && p.type === type)) return res.status(409).json({ error: 'Already used.' });
+      // 2 power-ups per match (the swap doesn't count)
+      if (type !== 'swap' && d.powers.filter(p => p.owner === slot && p.type !== 'swap').length >= 2) return res.status(409).json({ error: 'You already used your 2 power-ups.' });
       // Final 10': no new power-ups from the 80th minute (the swap stays allowed)
       if (type !== 'swap' && Number(b.from) >= 80) return res.status(409).json({ error: 'Power-ups are locked in the final 10 minutes.' });
       const okId = v => /^[a-z0-9]{1,24}$/.test(String(v || ''));
