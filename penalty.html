@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#08111e">
+<title>Penalty Duel</title>
+<link rel="icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#08111e; --panel:#111f31; --panel2:#17283c; --line:#294056;
+  --text:#edf5ff; --muted:#a9bbcf; --accent:#64efb0; --accent-ink:#04261a;
+  --gold:#ffd77c; --red:#ff6b6b; --blue:#4f7dff;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.5 var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100%;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+h1,h2{font-family:var(--display);margin:0;line-height:1.05;text-transform:uppercase;letter-spacing:.01em}
+.eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--muted)}
+[hidden]{display:none!important}
+
+/* Menu */
+.hero{border-radius:20px;padding:22px 20px;background:radial-gradient(circle at 85% 0%,#1c654f 0,transparent 55%),linear-gradient(160deg,#0f2a3a,#0a1626);border:1px solid var(--line)}
+.hero h1{font-size:2.8rem;font-weight:800;margin:6px 0 8px}
+.hero h1 span{color:var(--accent)}
+.hero p{margin:0;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.mode{display:flex;align-items:center;gap:14px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;transition:transform .12s,border-color .12s}
+.mode:active{transform:scale(.98)}
+.mode[aria-pressed="true"]{border-color:var(--accent);background:linear-gradient(160deg,#123a33,var(--panel))}
+.mode .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:var(--panel2);font-size:1.5rem;flex:none}
+.mode b{display:block;font-family:var(--display);font-size:1.3rem;text-transform:uppercase;line-height:1.1}
+.mode small{color:var(--muted)}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.field input{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font:inherit;min-width:0;width:100%}
+.btn{display:block;width:100%;padding:15px;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-weight:800;font-size:1.35rem;text-transform:uppercase;letter-spacing:.03em;box-shadow:0 8px 24px rgba(100,239,176,.25)}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:var(--panel);color:var(--text);border:1px solid var(--line);box-shadow:none;font-size:1.1rem}
+.langs{display:flex;gap:6px;justify-content:center}
+.langs button{padding:6px 12px;border-radius:99px;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:.8rem}
+.langs button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.rules{margin:0;padding-left:18px;color:var(--muted);font-size:.88rem}
+.rules li{margin:2px 0}
+
+/* Scoreboard */
+.board{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.side{display:flex;flex-direction:column;gap:5px;min-width:0}
+.side.r{align-items:flex-end;text-align:right}
+.side .nm{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:flex;align-items:center;gap:6px}
+.side .nm i{width:10px;height:10px;border-radius:50%;flex:none}
+.side.active .nm{color:var(--accent)}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.side.r .dots{justify-content:flex-end}
+.dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:10px;font-weight:800}
+.dot.g{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.dot.m{background:var(--red);border-color:var(--red);color:#2a0606}
+.dot.next{border-color:var(--muted);animation:pulse 1s infinite}
+@keyframes pulse{50%{border-color:var(--accent)}}
+.score{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1;font-variant-numeric:tabular-nums;text-align:center}
+.score small{display:block;font-size:.62rem;font-family:var(--body);font-weight:700;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-top:2px}
+
+/* Pitch */
+.stage{position:relative;width:100%;aspect-ratio:4/4.3;border-radius:20px;overflow:hidden;border:1px solid var(--line);
+  background:
+   linear-gradient(180deg,rgba(8,17,30,.0) 0,rgba(8,17,30,0) 40%,rgba(8,17,30,.25) 100%),
+   repeating-linear-gradient(180deg,#14583f 0 34px,#176548 34px 68px);
+  user-select:none;-webkit-user-select:none}
+.stage .sky{position:absolute;left:0;right:0;top:0;height:30%;background:linear-gradient(180deg,#0b1b2c,#10283a);}
+.stage .crowd{position:absolute;left:0;right:0;top:0;height:30%;opacity:.5;background:radial-gradient(circle,#2a4058 1.4px,transparent 1.8px) 0 0/9px 9px,radial-gradient(circle,#3a5470 1.4px,transparent 1.8px) 4px 4px/9px 9px}
+.stage .box{position:absolute;left:4%;right:4%;top:30%;height:44%;border:3px solid rgba(255,255,255,.55);border-top:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+.stage .box6{position:absolute;left:24%;right:24%;top:30%;height:15%;border:3px solid rgba(255,255,255,.55);border-top:0}
+.stage .goalline{position:absolute;left:0;right:0;top:30%;height:3px;background:rgba(255,255,255,.6)}
+.stage .spot{position:absolute;left:50%;top:84%;width:10px;height:6px;margin-left:-5px;border-radius:50%;background:rgba(255,255,255,.8)}
+.goal{position:absolute;left:12%;right:12%;top:6%;height:24.5%;border:6px solid #f4f8ff;border-bottom:0;border-radius:4px 4px 0 0;box-shadow:0 6px 18px rgba(0,0,0,.35);
+  background:
+   repeating-linear-gradient(0deg,rgba(255,255,255,.22) 0 1.5px,transparent 1.5px 11px),
+   repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 1.5px,transparent 1.5px 11px),
+   rgba(4,12,22,.55);transform-origin:50% 0}
+.keeper{position:absolute;left:50%;top:9%;width:22%;margin-left:-11%;height:22%;transform-origin:50% 90%;z-index:2}
+.keeper svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 6px 6px rgba(0,0,0,.4))}
+.ball{position:absolute;left:50%;top:77%;width:12%;aspect-ratio:1;margin-left:-6%;z-index:3;will-change:transform}
+.ball svg{width:100%;height:100%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.45))}
+.shadow{position:absolute;left:50%;top:86.5%;width:10%;height:2.6%;margin-left:-5%;border-radius:50%;background:rgba(0,0,0,.35);z-index:1}
+.banner{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:5}
+.banner span{font-family:var(--display);font-weight:800;font-size:3.6rem;text-transform:uppercase;letter-spacing:.02em;padding:4px 22px;border-radius:14px;transform:scale(.4) rotate(-6deg);opacity:0}
+.banner.show span{animation:pop .5s cubic-bezier(.2,1.6,.4,1) forwards}
+.banner.goal span{background:var(--accent);color:var(--accent-ink);box-shadow:0 10px 40px rgba(100,239,176,.5)}
+.banner.save span{background:var(--gold);color:#2b1d00;box-shadow:0 10px 40px rgba(255,215,124,.45)}
+@keyframes pop{to{transform:scale(1) rotate(-4deg);opacity:1}}
+.flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 20%,rgba(100,239,176,.45),transparent 60%);opacity:0;pointer-events:none;z-index:4}
+.tag{position:absolute;left:10px;top:10px;z-index:4;background:rgba(8,17,30,.75);border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+
+/* Controls */
+.prompt{text-align:center;display:flex;flex-direction:column;gap:2px}
+.prompt h2{font-size:1.6rem}
+.prompt .who{font-weight:700}
+.picks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.picks button{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:700;transition:transform .1s,border-color .1s}
+.picks button svg{width:30px;height:30px;color:var(--accent)}
+.picks button:active{transform:scale(.95)}
+.picks button:disabled{opacity:.4}
+.picks.keep button svg{color:var(--gold)}
+
+/* Overlays */
+.ov{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;background:rgba(5,10,18,.94);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.ov .in{max-width:380px;width:100%;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+.ov .big{font-size:3.4rem;line-height:1}
+.ov h2{font-size:2.2rem}
+.ov p{margin:0;color:var(--muted)}
+.reward{width:100%;border:1px dashed var(--gold);border-radius:14px;padding:12px;color:var(--gold);font-weight:600;font-size:.9rem;background:rgba(255,215,124,.06)}
+.final{font-family:var(--display);font-weight:800;font-size:3rem;line-height:1}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-noi18n></div>
+<script src="/settings.js"></script>
+<script>
+(function(){
+'use strict';
+const S = window.FLDSettings || null;
+const $ = (s, r = document) => r.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ---------- Texts (French / English / Spanish) ----------
+const T = {
+  fr:{title1:'Tirs',title2:'au but',sub:'Mini-jeu de la mi-temps. 3 tirs chacun, le gagnant gagne un bonus.',
+    vsCpu:'Contre l’ordi',vsCpuS:'Entraîne-toi seul',same:'2 joueurs',sameS:'Sur le même téléphone',
+    p1:'Joueur 1',p2:'Joueur 2',cpu:'Ordi',you:'Toi',start:'Coup d’envoi',
+    howto:'Comment jouer',r1:'Le tireur choisit gauche, centre ou droite.',r2:'Le gardien choisit aussi où plonger.',r3:'Côté différent = but. Même côté = arrêt.',r4:'3 tirs chacun. Égalité = mort subite.',
+    left:'Gauche',center:'Centre',right:'Droite',shoot:'Où tires-tu ?',dive:'Où plonges-tu ?',
+    shooter:'tire',keeper:'au but',cpuShoots:'L’ordi va tirer…',cpuKeeps:'L’ordi est dans les buts',
+    pass:'Passe le téléphone à',passS1:'C’est à toi de tirer. ',passS2:'C’est toi le gardien. ',noLook:'ne regarde pas !',ready:'Je suis prêt',
+    goal:'But !',save:'Arrêt !',sd:'Mort subite',kick:'Tir',
+    wins:'gagne !',youWin:'Tu as gagné !',youLose:'Perdu…',rewardTxt:'🎁 Plus tard : le gagnant de la mi-temps reçoit ×2 points pendant 5 min ou un bonus en plus.',
+    again:'Rejouer',menu:'Changer de mode',proto:'Prototype · test'},
+  en:{title1:'Penalty',title2:'shootout',sub:'The half-time mini-game. 3 kicks each, the winner gets a power-up.',
+    vsCpu:'Vs the computer',vsCpuS:'Practise on your own',same:'2 players',sameS:'On the same phone',
+    p1:'Player 1',p2:'Player 2',cpu:'CPU',you:'You',start:'Kick off',
+    howto:'How to play',r1:'The shooter picks left, centre or right.',r2:'The keeper picks where to dive.',r3:'Different side = goal. Same side = save.',r4:'3 kicks each. Tied = sudden death.',
+    left:'Left',center:'Centre',right:'Right',shoot:'Where do you shoot?',dive:'Where do you dive?',
+    shooter:'shoots',keeper:'in goal',cpuShoots:'The CPU is about to shoot…',cpuKeeps:'The CPU is in goal',
+    pass:'Pass the phone to',passS1:'Your turn to shoot. ',passS2:'You are the keeper. ',noLook:'don’t look!',ready:'I’m ready',
+    goal:'Goal!',save:'Saved!',sd:'Sudden death',kick:'Kick',
+    wins:'wins!',youWin:'You win!',youLose:'You lose…',rewardTxt:'🎁 Later: the half-time winner gets ×2 points for 5 min or an extra power-up.',
+    again:'Play again',menu:'Change mode',proto:'Prototype · test'},
+  es:{title1:'Tanda de',title2:'penaltis',sub:'El minijuego del descanso. 3 tiros cada uno, el ganador gana un poder.',
+    vsCpu:'Contra la máquina',vsCpuS:'Practica solo',same:'2 jugadores',sameS:'En el mismo móvil',
+    p1:'Jugador 1',p2:'Jugador 2',cpu:'Máquina',you:'Tú',start:'¡A jugar!',
+    howto:'Cómo se juega',r1:'El tirador elige izquierda, centro o derecha.',r2:'El portero elige dónde tirarse.',r3:'Lado distinto = gol. Mismo lado = parada.',r4:'3 tiros cada uno. Empate = muerte súbita.',
+    left:'Izquierda',center:'Centro',right:'Derecha',shoot:'¿Dónde tiras?',dive:'¿Dónde te tiras?',
+    shooter:'tira',keeper:'en la portería',cpuShoots:'La máquina va a tirar…',cpuKeeps:'La máquina está en la portería',
+    pass:'Pasa el móvil a',passS1:'Te toca tirar. ',passS2:'Eres el portero. ',noLook:'¡no mires!',ready:'Estoy listo',
+    goal:'¡Gol!',save:'¡Parada!',sd:'Muerte súbita',kick:'Tiro',
+    wins:'¡gana!',youWin:'¡Has ganado!',youLose:'Has perdido…',rewardTxt:'🎁 Más adelante: el ganador del descanso recibe ×2 puntos durante 5 min o un poder extra.',
+    again:'Otra vez',menu:'Cambiar modo',proto:'Prototipo · prueba'}
+};
+let lang = (S && S.lang && S.lang()) || (navigator.language || 'fr').slice(0,2);
+if (!T[lang]) lang = 'fr';
+const t = k => T[lang][k] || T.en[k] || k;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- Sound ----------
+const sfx = n => { try { S && S.sfx(n); } catch (e) {} };
+let AC = null;
+function soundOn(){ if (!S) return true; const o = S.opt(); return !o.all && o.sfx; }
+function ac(){ if (!AC){ const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; AC = new C(); } if (AC.state === 'suspended') AC.resume().catch(()=>{}); return AC; }
+function thump(kind){
+  if (!soundOn()) return; const c = ac(); if (!c) return; const t0 = c.currentTime + 0.01;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(kind === 'kick' ? 180 : 110, t0); o.frequency.exponentialRampToValueAtTime(40, t0 + 0.18);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(kind === 'kick' ? 0.6 : 0.45, t0 + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+  o.connect(g).connect(c.destination); o.start(t0); o.stop(t0 + 0.3);
+  const len = c.sampleRate * 0.12, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g2 = c.createGain();
+  s.buffer = b; f.type = 'bandpass'; f.frequency.value = kind === 'kick' ? 1800 : 700; g2.gain.value = 0.25;
+  s.connect(f).connect(g2).connect(c.destination); s.start(t0);
+}
+function groan(){
+  if (!soundOn()) return; const c = ac(); if (!c) return; const t0 = c.currentTime + 0.01;
+  const len = c.sampleRate * 1.4, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = b; f.type = 'bandpass'; f.Q.value = 0.8; f.frequency.setValueAtTime(900, t0); f.frequency.exponentialRampToValueAtTime(350, t0 + 1.3);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.12, t0 + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.35);
+  s.connect(f).connect(g).connect(c.destination); s.start(t0);
+}
+const buzz = ms => { try { if (!S || S.opt().all) return; navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+// ---------- Drawings ----------
+const BALL = `<svg viewBox="0 0 100 100"><defs><radialGradient id="bg1" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfd8e3"/></radialGradient><clipPath id="bc"><circle cx="50" cy="50" r="46"/></clipPath></defs><circle cx="50" cy="50" r="46" fill="url(#bg1)"/><g clip-path="url(#bc)" fill="#0d1a2a"><path d="M50 33 L63 42 L58 57 L42 57 L37 42Z"/><path d="M50 4 L58 12 L50 20 L42 12Z" transform="translate(0 -2)"/><path d="M86 36 L96 40 L94 54 L84 50Z"/><path d="M14 36 L4 40 L6 54 L16 50Z"/><path d="M66 80 L76 74 L84 86 L72 96Z"/><path d="M34 80 L24 74 L16 86 L28 96Z"/></g><g stroke="#0d1a2a" stroke-width="2.5" fill="none" clip-path="url(#bc)"><path d="M50 33V18M63 42l20-6M58 57l10 18M42 57L32 75M37 42l-20-6"/></g><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="2"/></svg>`;
+const KEEPER = `<svg viewBox="0 0 100 120"><g stroke-linecap="round" stroke-linejoin="round">
+<path d="M38 82 L32 114 M62 82 L68 114" stroke="#0d1a2a" stroke-width="11"/>
+<path d="M32 114 h-7 M68 114 h7" stroke="#08111e" stroke-width="7"/>
+<path class="arm" d="M30 44 L12 22" stroke="#ffd77c" stroke-width="10"/><path d="M70 44 L88 22" stroke="#ffd77c" stroke-width="10"/>
+<circle cx="10" cy="19" r="8" fill="#64efb0"/><circle cx="90" cy="19" r="8" fill="#64efb0"/>
+<rect x="28" y="36" width="44" height="50" rx="12" fill="#ffd77c"/>
+<path d="M28 74 h44" stroke="#e2b552" stroke-width="5"/>
+<text x="50" y="66" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="800" font-size="22" fill="#2b1d00">1</text>
+<circle cx="50" cy="22" r="13" fill="#e9b48a"/><path d="M37 19 a13 13 0 0 1 26 0 Z" fill="#3a2a1d"/>
+</g></svg>`;
+const ARROW = {
+  left:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 19L6 6M6 15V6h9"/></svg>',
+  center:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V4M5 10l7-7 7 7"/></svg>',
+  right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L18 6M9 6h9v9"/></svg>'
+};
+const DIRS = ['left','center','right'];
+
+// ---------- State ----------
+const app = $('#app');
+let mode = 'cpu';           // 'cpu' or 'same'
+let names = ['', ''];
+let g = null;               // current game
+let busy = false;
+
+function newGame(){
+  const n0 = names[0].trim() || (mode === 'cpu' ? t('you') : t('p1'));
+  const n1 = mode === 'cpu' ? t('cpu') : (names[1].trim() || t('p2'));
+  g = { names:[n0,n1], kicks:[[],[]], turn:0, over:false, winner:null, sd:false };
+}
+const goals = p => g.kicks[p].filter(Boolean).length;
+const isCpu = p => mode === 'cpu' && p === 1;
+
+// Is the shootout decided? (3 kicks each, then sudden death)
+function decided(){
+  const [a, b] = g.kicks, ga = goals(0), gb = goals(1);
+  if (a.length <= 3 && b.length <= 3) {
+    const leftA = 3 - a.length, leftB = 3 - b.length;
+    if (ga + leftA < gb) return 1;
+    if (gb + leftB < ga) return 0;
+    if (a.length === 3 && b.length === 3 && ga !== gb) return ga > gb ? 0 : 1;
+    return null;
+  }
+  if (a.length === b.length && ga !== gb) return ga > gb ? 0 : 1;
+  return null;
+}
+
+// ---------- Screens ----------
+function langBar(){
+  return `<div class="langs">${['fr','en','es'].map(l => `<button data-lang="${l}" aria-pressed="${l===lang}">${l.toUpperCase()}</button>`).join('')}</div>`;
+}
+function menu(){
+  app.innerHTML = `
+  <div class="hero">
+    <div class="eyebrow">${t('proto')}</div>
+    <h1>${t('title1')} <span>${t('title2')}</span></h1>
+    <p>${t('sub')}</p>
+  </div>
+  <button class="mode" data-mode="cpu" aria-pressed="${mode==='cpu'}"><span class="ic">🤖</span><span><b>${t('vsCpu')}</b><small>${t('vsCpuS')}</small></span></button>
+  <button class="mode" data-mode="same" aria-pressed="${mode==='same'}"><span class="ic">📱</span><span><b>${t('same')}</b><small>${t('sameS')}</small></span></button>
+  <div class="card">
+    <div class="names">
+      <div class="field"><label for="n0">${mode==='cpu'?t('you'):t('p1')}</label><input id="n0" maxlength="14" placeholder="${mode==='cpu'?t('you'):t('p1')}" value="${esc(names[0])}"></div>
+      <div class="field"><label for="n1">${mode==='cpu'?t('cpu'):t('p2')}</label><input id="n1" maxlength="14" ${mode==='cpu'?'disabled':''} placeholder="${mode==='cpu'?t('cpu'):t('p2')}" value="${mode==='cpu'?'':esc(names[1])}"></div>
+    </div>
+    <button class="btn" id="go">${t('start')}</button>
+  </div>
+  <div class="card"><div class="eyebrow">${t('howto')}</div>
+    <ul class="rules"><li>${t('r1')}</li><li>${t('r2')}</li><li>${t('r3')}</li><li>${t('r4')}</li></ul>
+  </div>
+  ${langBar()}`;
+  app.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { saveNames(); mode = b.dataset.mode; menu(); });
+  bindLang(menu);
+  $('#go').onclick = () => { saveNames(); newGame(); game(); };
+}
+function saveNames(){ const a = $('#n0'), b = $('#n1'); if (a) names[0] = a.value; if (b && !b.disabled) names[1] = b.value; }
+function bindLang(redraw){
+  app.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { saveNames(); lang = b.dataset.lang; try { S && S.setLang(lang); } catch (e) {} document.documentElement.lang = lang; redraw(); });
+}
+
+function dotsHtml(p){
+  const ks = g.kicks[p], total = Math.max(3, ks.length + (g.turn === p && !g.over ? 1 : 0), g.kicks[1-p].length);
+  let h = '';
+  for (let i = 0; i < total; i++) {
+    if (i < ks.length) h += `<span class="dot ${ks[i]?'g':'m'}">${ks[i]?'✓':'✕'}</span>`;
+    else h += `<span class="dot ${i===ks.length && g.turn===p && !g.over ? 'next' : ''}"></span>`;
+  }
+  return h;
+}
+function boardHtml(){
+  const sd = g.kicks[0].length >= 3 && g.kicks[1].length >= 3 && !g.over || g.sd;
+  return `<div class="board">
+    <div class="side ${g.turn===0&&!g.over?'active':''}"><div class="nm"><i style="background:var(--accent)"></i>${esc(g.names[0])}</div><div class="dots">${dotsHtml(0)}</div></div>
+    <div class="score">${goals(0)}–${goals(1)}${sd?`<small>${t('sd')}</small>`:''}</div>
+    <div class="side r ${g.turn===1&&!g.over?'active':''}"><div class="nm">${esc(g.names[1])}<i style="background:var(--blue)"></i></div><div class="dots">${dotsHtml(1)}</div></div>
+  </div>`;
+}
+
+function game(){
+  app.innerHTML = `
+  <div id="board"></div>
+  <div class="stage" id="stage">
+    <div class="sky"></div><div class="crowd"></div>
+    <div class="box"></div><div class="box6"></div><div class="goalline"></div><div class="spot"></div>
+    <div class="goal" id="goal"></div>
+    <div class="keeper" id="keeper">${KEEPER}</div>
+    <div class="shadow" id="shadow"></div>
+    <div class="ball" id="ball">${BALL}</div>
+    <div class="flash" id="flash"></div>
+    <div class="tag" id="tag"></div>
+    <div class="banner" id="banner"><span></span></div>
+  </div>
+  <div class="prompt" id="prompt"></div>
+  <div class="picks" id="picks"></div>`;
+  sfx('whistle');
+  nextKick();
+}
+
+function drawBoard(){ $('#board').innerHTML = boardHtml(); }
+
+function picksHtml(kind){
+  return DIRS.map(d => `<button data-d="${d}">${ARROW[d]}<span>${t(d)}</span></button>`).join('');
+}
+// Ask a human for a direction. Returns a promise with 'left' | 'center' | 'right'.
+function ask(kind, who){
+  return new Promise(res => {
+    $('#prompt').innerHTML = `<h2>${kind==='shoot'?t('shoot'):t('dive')}</h2><div class="muted"><span class="who">${esc(who)}</span> · ${kind==='shoot'?t('shooter'):t('keeper')}</div>`;
+    const p = $('#picks'); p.className = 'picks' + (kind === 'keep' ? ' keep' : ''); p.innerHTML = picksHtml(kind); p.hidden = false;
+    p.querySelectorAll('button').forEach(b => b.onclick = () => { sfx('pick'); p.querySelectorAll('button').forEach(x => x.disabled = true); res(b.dataset.d); });
+  });
+}
+// Same phone: hide the screen and hand over the phone
+function handOver(to, role, other){
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.className = 'ov';
+    ov.innerHTML = `<div class="in"><div class="big">${role==='shoot'?'⚽':'🧤'}</div>
+      <p>${t('pass')}</p><h2>${esc(to)}</h2>
+      <p>${role==='shoot'?t('passS1'):t('passS2')}<b>${esc(other)}</b>, ${t('noLook')}</p>
+      <button class="btn" style="margin-top:6px">${t('ready')}</button></div>`;
+    app.appendChild(ov);
+    ov.querySelector('button').onclick = () => { ov.remove(); res(); };
+  });
+}
+const cpuPick = () => DIRS[Math.floor(Math.random() * 3)];
+
+async function nextKick(){
+  drawBoard();
+  const sh = g.turn, kp = 1 - sh, n = g.kicks[sh].length + 1;
+  $('#tag').textContent = (n > 3 ? t('sd') + ' · ' : '') + t('kick') + ' ' + n;
+  resetStage();
+  $('#picks').innerHTML = picksHtml(); $('#picks').querySelectorAll('button').forEach(b => b.disabled = true);
+  let shot, dive;
+  if (mode === 'cpu') {
+    if (isCpu(sh)) {
+      $('#prompt').innerHTML = `<h2>${t('dive')}</h2><div class="muted">${t('cpuShoots')}</div>`;
+      dive = await ask('keep', g.names[kp]); shot = cpuPick();
+    } else {
+      shot = await ask('shoot', g.names[sh]);
+      $('#prompt').innerHTML = `<h2>&nbsp;</h2><div class="muted">${t('cpuKeeps')}</div>`;
+      dive = cpuPick();
+    }
+  } else {
+    $('#prompt').innerHTML = ''; $('#picks').innerHTML = '';
+    await handOver(g.names[sh], 'shoot', g.names[kp]);
+    shot = await ask('shoot', g.names[sh]);
+    $('#prompt').innerHTML = ''; $('#picks').innerHTML = '';
+    await handOver(g.names[kp], 'keep', g.names[sh]);
+    dive = await ask('keep', g.names[kp]);
+  }
+  const scored = shot !== dive;
+  await animate(shot, dive, scored);
+  g.kicks[sh].push(scored);
+  const w = decided();
+  if (w !== null) { g.over = true; g.winner = w; drawBoard(); await sleep(400); return end(); }
+  if (g.kicks[0].length >= 3 && g.kicks[1].length >= 3) g.sd = true;
+  g.turn = kp;
+  await sleep(250);
+  nextKick();
+}
+
+function resetStage(){
+  ['#ball','#keeper','#shadow','#goal'].forEach(s => { const e = $(s); e.getAnimations().forEach(a => a.cancel()); });
+  const b = $('#banner'); b.className = 'banner'; b.firstElementChild.textContent = '';
+}
+
+async function animate(shot, dive, scored){
+  const stage = $('#stage'), W = stage.clientWidth, H = stage.clientHeight;
+  const ball = $('#ball'), keeper = $('#keeper'), shadow = $('#shadow'), goalEl = $('#goal');
+  const sx = { left:-1, center:0, right:1 };
+  // target in the goal (px from the ball's start)
+  const tx = sx[shot] * W * 0.27, ty = -(H * 0.77 - H * (shot === 'center' ? 0.15 : 0.17));
+  const kx = sx[dive] * W * 0.24;
+  // keeper wobble before the kick
+  const wob = keeper.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:500,iterations:1});
+  // run-up: ball sits, small squash
+  await sleep(350);
+  thump('kick'); buzz(20);
+  const dur = 560;
+  const ka = dive === 'center'
+    ? [{transform:'translateY(0) scale(1)'},{transform:'translateY(-16%) scale(1.05)',offset:.5},{transform:'translateY(-8%) scale(1.05)'}]
+    : [{transform:'translateX(0) rotate(0)'},{transform:`translateX(${kx*0.8}px) translateY(-6%) rotate(${sx[dive]*55}deg)`,offset:.6},{transform:`translateX(${kx}px) translateY(10%) rotate(${sx[dive]*80}deg)`}];
+  keeper.animate(ka, {duration:dur*0.9, delay:90, easing:'cubic-bezier(.2,.7,.3,1)', fill:'forwards'});
+  shadow.animate([{opacity:1,transform:'scale(1)'},{opacity:0,transform:`translate(${tx*0.6}px,${ty*0.25}px) scale(.4)`}],{duration:dur*0.6,fill:'forwards'});
+  const spin = sx[shot] * 540 + 200;
+  if (scored) {
+    const fly = ball.animate([
+      {transform:'translate(0,0) scale(1) rotate(0)'},
+      {transform:`translate(${tx*0.55}px,${ty*0.6}px) scale(.78) rotate(${spin*0.6}deg)`,offset:.55},
+      {transform:`translate(${tx}px,${ty}px) scale(.5) rotate(${spin}deg)`}
+    ],{duration:dur,easing:'cubic-bezier(.25,.6,.4,1)',fill:'forwards'});
+    await fly.finished;
+    // ball drops in the net, net bulges
+    ball.animate([{transform:`translate(${tx}px,${ty}px) scale(.5) rotate(${spin}deg)`},{transform:`translate(${tx*1.04}px,${ty*0.9}px) scale(.46) rotate(${spin+90}deg)`}],{duration:500,easing:'ease-in',fill:'forwards'});
+    goalEl.animate([{transform:'scale(1)'},{transform:'scale(1.03,1.06)'},{transform:'scale(.99)'},{transform:'scale(1)'}],{duration:450});
+    $('#flash').animate([{opacity:0},{opacity:1},{opacity:0}],{duration:700});
+    sfx('goal'); buzz([40,40,80]);
+    showBanner('goal');
+  } else {
+    // ball reaches the keeper, then bounces back out
+    const hx = tx * 0.92, hy = ty * 0.92;
+    const fly = ball.animate([
+      {transform:'translate(0,0) scale(1) rotate(0)'},
+      {transform:`translate(${hx}px,${hy}px) scale(.56) rotate(${spin*0.8}deg)`}
+    ],{duration:dur*0.85,easing:'cubic-bezier(.25,.6,.4,1)',fill:'forwards'});
+    await fly.finished;
+    thump('save'); buzz(60);
+    const out = shot === 'center' ? (Math.random() < .5 ? -1 : 1) : sx[shot];
+    ball.animate([
+      {transform:`translate(${hx}px,${hy}px) scale(.56) rotate(${spin*0.8}deg)`},
+      {transform:`translate(${hx + out*W*0.22}px,${hy*0.55}px) scale(.75) rotate(${spin*0.8 - 400}deg)`}
+    ],{duration:600,easing:'cubic-bezier(.2,.8,.3,1)',fill:'forwards'});
+    groan(); sfx('bad');
+    showBanner('save');
+  }
+  await sleep(1500);
+}
+function showBanner(kind){
+  const b = $('#banner'); b.className = 'banner ' + kind; b.firstElementChild.textContent = t(kind);
+  void b.offsetWidth; b.classList.add('show');
+}
+
+function end(){
+  const w = g.winner, human = mode === 'cpu';
+  const won = human ? w === 0 : true;
+  sfx(won ? 'win' : 'lose'); buzz(won ? [60,60,120] : 120);
+  const ov = document.createElement('div'); ov.className = 'ov';
+  const title = human ? (won ? t('youWin') : t('youLose')) : `${esc(g.names[w])} ${t('wins')}`;
+  ov.innerHTML = `<div class="in"><div class="big">${won ? '🏆' : '😬'}</div>
+    <h2>${title}</h2>
+    <div class="final">${goals(0)} – ${goals(1)}</div>
+    <p>${esc(g.names[0])} · ${esc(g.names[1])}</p>
+    <div class="reward">${t('rewardTxt')}</div>
+    <button class="btn" id="again">${t('again')}</button>
+    <button class="btn ghost" id="tomenu">${t('menu')}</button></div>`;
+  app.appendChild(ov);
+  $('#again').onclick = () => { ov.remove(); newGame(); game(); };
+  $('#tomenu').onclick = () => { ov.remove(); menu(); };
+}
+
+menu();
+})();
+</script>
+</body>
+</html>
