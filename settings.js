@@ -110,6 +110,13 @@ Your name|Ton nom|Tu nombre
 Player 1|Joueur 1|Jugador 1
 Player 2|Joueur 2|Jugador 2
 Player 3|Joueur 3|Jugador 3
+Send this link to your friends|Envoie ce lien à tes amis|Envía este enlace a tus amigos
+Waiting for players|En attente des joueurs|Esperando a los jugadores
+When everyone has joined, the draft order is drawn at random. Then you pick in a snake: 1-2-3-4, then 4-3-2-1.|Quand tout le monde est là, l'ordre de choix est tiré au sort. Puis on choisit en serpent : 1-2-3-4, puis 4-3-2-1.|Cuando todos se hayan unido, el orden se sortea. Luego se elige en serpiente: 1-2-3-4 y después 4-3-2-1.
+You pick first!|Tu choisis en premier !|¡Eliges primero!
+This game is full.|Cette partie est complète.|Esta partida está completa.
+All players have already joined.|Tous les joueurs sont déjà là.|Todos los jugadores ya se han unido.
+(you)|(toi)|(tú)
 Player 4|Joueur 4|Jugador 4
 Players|Joueurs|Jugadores
 Draft order|Ordre de choix|Orden de elección

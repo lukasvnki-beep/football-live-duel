@@ -55,9 +55,11 @@ async function mailReport(r) {
 
 async function load(code) {
   const k = 'duel:' + code;
-  const [meta, p0, p1, start, coin, d0, d1, d2, d3, pen0, pen1, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start', k + ':coin', k + ':dp:0', k + ':dp:1', k + ':dp:2', k + ':dp:3', k + ':pen:0', k + ':pen:1'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
+  const [meta, p0, p1, start, coin, d0, d1, d2, d3, pen0, pen1, p2, p3, d4, d5, d6, d7, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start', k + ':coin', k + ':dp:0', k + ':dp:1', k + ':dp:2', k + ':dp:3', k + ':pen:0', k + ':pen:1', k + ':p2', k + ':p3', k + ':dp:4', k + ':dp:5', k + ':dp:6', k + ':dp:7'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
   if (!meta) return null;
-  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, coin: coin ? JSON.parse(coin) : null, dp: [d0, d1, d2, d3].filter(Boolean).map(x => JSON.parse(x)), pen: [pen0, pen1].map(x => x ? JSON.parse(x) : null), chat: (chat || []).map(x => JSON.parse(x)) };
+  const M = JSON.parse(meta), max = Math.min(4, Math.max(2, M.max || 2));
+  if (max > 2) return { meta: M, max, p: [p0, p1, p2, p3].slice(0, max).map(x => x ? JSON.parse(x) : null), powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, coin: coin ? JSON.parse(coin) : null, dp: [d0, d1, d2, d3, d4, d5, d6, d7].filter(Boolean).map(x => JSON.parse(x)), pen: [null, null], chat: (chat || []).map(x => JSON.parse(x)) };
+  return { meta: M, max: 2, p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, coin: coin ? JSON.parse(coin) : null, dp: [d0, d1, d2, d3].filter(Boolean).map(x => JSON.parse(x)), pen: [pen0, pen1].map(x => x ? JSON.parse(x) : null), chat: (chat || []).map(x => JSON.parse(x)) };
 }
 
 // Half-time penalty shootout: each phone takes 5 kicks against the computer keeper; more goals wins ×2 for 5 min.
@@ -75,7 +77,7 @@ function penView(d, slot) {
 
 // What a given player is allowed to see
 function view(d, slot) {
-  const both = !!(d.p[0] && d.p[0].ready && d.p[1] && d.p[1].ready);
+  const both = d.p.every(p => p && p.ready);
   const players = d.p.map((p, i) => p && {
     name: p.name, ready: !!p.ready,
     picks: (both || i === slot) ? p.picks || [] : [],
@@ -84,7 +86,7 @@ function view(d, slot) {
     dareOk: !!p.dareOk,
     capt: (both || i === slot) ? (p.capt === 1 ? 1 : 0) : 0,
   });
-  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, draft: d.coin ? { first: d.coin.first, picks: d.dp } : null, chat: slot >= 0 ? d.chat : [], pen: both ? penView(d, slot) : null };
+  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, max: d.max, draft: d.coin ? { first: d.coin.first, seq: d.coin.seq || null, picks: d.dp } : null, chat: slot >= 0 ? d.chat : [], pen: both && d.max === 2 ? penView(d, slot) : null };
 }
 
 // Link a duel player to their profile (api/league.js) so the result counts in the rankings
@@ -142,7 +144,7 @@ export default async function handler(req, res) {
       const pl = await player(b.pid, b.ptok, ip);
       const stop = await checkGame(redis, pl.who, pl.p);
       if (stop) return res.status(LIMIT).json({ error: stop, limit: true });
-      const meta = { code: newCode(), created: Date.now(), teams,
+      const meta = { code: newCode(), created: Date.now(), teams, max: Math.min(4, Math.max(2, Math.floor(Number(b.max) || 2))),
         fx: { id: 'r' + fx.apiId, apiId: Number(fx.apiId), kind: 'real', home: clean(fx.home, 12), away: clean(fx.away, 12), comp: clean(fx.comp, 80), leagueId: Number(fx.leagueId) || 0, kickoff: clean(fx.kickoff, 40), status: clean(fx.status, 6), elapsed: Number(fx.elapsed) || null, goals: { home: null, away: null }, homeTeam: { id: Number(fx.homeTeam && fx.homeTeam.id) || 0, name: clean(fx.homeTeam && fx.homeTeam.name, 60) }, awayTeam: { id: Number(fx.awayTeam && fx.awayTeam.id) || 0, name: clean(fx.awayTeam && fx.awayTeam.name, 60) } } };
       const token = crypto.randomBytes(18).toString('hex');
       const k = 'duel:' + meta.code;
@@ -162,22 +164,26 @@ export default async function handler(req, res) {
     if (!d) return res.status(404).json({ error: 'This duel does not exist or has expired.' });
 
     if (b.action === 'join') {
-      if (d.p[1]) {
-        const s = b.token ? slotOf(d, b.token) : -1;
-        if (s >= 0) return res.status(200).json({ token: b.token, state: view(d, s) });
-        return res.status(409).json({ error: 'Two players are already in this duel.' });
-      }
+      const s0 = b.token ? slotOf(d, b.token) : -1;
+      if (s0 >= 0) return res.status(200).json({ token: b.token, state: view(d, s0) });
+      const free = d.p.findIndex(p => !p);
+      if (free < 0) return res.status(409).json({ error: d.max > 2 ? 'This game is full.' : 'Two players are already in this duel.' });
       const token = crypto.randomBytes(18).toString('hex');
       const pl = await player(b.pid, b.ptok, ip), pid = pl.id;
       const stop = await checkGame(redis, pl.who, pl.p);
       if (stop) return res.status(LIMIT).json({ error: stop, limit: true });
-      const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player 2', tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
-      if (!ok[0]) return res.status(409).json({ error: 'Two players are already in this duel.' });
+      const ok = await redis([['SET', k + ':p' + free, JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player ' + (free + 1), tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
+      if (!ok[0]) return res.status(409).json({ error: 'Someone just took that place. Try again.' });
       await addGame(redis, pl.who, pl.p);
-      // Coin flip: decides who picks first
-      if (b.draft) await redis([['SET', k + ':coin', JSON.stringify({ first: crypto.randomInt(2), at: Date.now() }), 'EX', String(TTL), 'NX']]);
+      // Coin flip: decides who picks first. With 3-4 players: a random draft order once everyone is in.
+      if (d.max === 2 && b.draft) await redis([['SET', k + ':coin', JSON.stringify({ first: crypto.randomInt(2), at: Date.now() }), 'EX', String(TTL), 'NX']]);
+      if (d.max > 2 && d.p.filter(Boolean).length + 1 === d.max) {
+        const seq = [...Array(d.max).keys()];
+        for (let i = seq.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [seq[i], seq[j]] = [seq[j], seq[i]]; }
+        await redis([['SET', k + ':coin', JSON.stringify({ first: seq[0], seq, at: Date.now() }), 'EX', String(TTL), 'NX']]);
+      }
       const d2 = await load(code);
-      return res.status(200).json({ token, state: view(d2, 1) });
+      return res.status(200).json({ token, state: view(d2, free) });
     }
 
     const slot = slotOf(d, b.token);
@@ -194,9 +200,11 @@ export default async function handler(req, res) {
     } else if (b.action === 'pick') {
       // Turn-by-turn draft after the coin flip: first, other, first, other. A player can only be picked once.
       if (!d.coin) return res.status(409).json({ error: 'Waiting for your friend to join.' });
-      const n = d.dp.length;
-      if (n >= 4) return res.status(409).json({ error: 'All players are picked.' });
-      const turn = n % 2 === 0 ? d.coin.first : 1 - d.coin.first;
+      const n = d.dp.length, total = 2 * d.max;
+      if (n >= total) return res.status(409).json({ error: 'All players are picked.' });
+      // 2 players: first, other, first, other. 3-4 players: snake 1-2-3-4, 4-3-2-1.
+      const order = d.coin.seq ? [...d.coin.seq, ...d.coin.seq.slice().reverse()] : null;
+      const turn = order ? order[n] : n % 2 === 0 ? d.coin.first : 1 - d.coin.first;
       if (turn !== slot) return res.status(409).json({ error: "It's not your turn." });
       const id = String(b.id || '');
       if (!/^[a-z0-9]{1,24}$/.test(id)) return res.status(400).json({ error: 'Invalid player.' });
@@ -205,12 +213,14 @@ export default async function handler(req, res) {
       const entry = { s: slot, id, pl: { id, team: clean(pl.team, 12), name: clean(pl.name, 60), pos: clean(pl.pos, 4), num: clean(pl.num, 3) }, at: Date.now() };
       const [got] = await redis([['SET', k + ':dp:' + n, JSON.stringify(entry), 'EX', String(TTL), 'NX']]);
       if (!got) return res.status(409).json({ error: 'Too slow, try again.' });
-      if (n === 3) {
+      if (n === total - 1) {
         const all = [...d.dp, entry];
-        const cmds = [0, 1].map(s2 => { const mine = all.filter(x => x.s === s2); const p = d.p[s2];
+        const cmds = d.p.map((_, s2) => s2).map(s2 => { const mine = all.filter(x => x.s === s2); const p = d.p[s2];
           return ['SET', k + ':p' + s2, JSON.stringify({ ...p, picks: mine.map(x => x.id), players: mine.map(x => x.pl), ready: true }), 'KEEPTTL']; });
         await redis(cmds);
       }
+    } else if ((b.action === 'dare' || b.action === 'consent' || b.action === 'pen') && d.max > 2) {
+      return res.status(409).json({ error: 'Only in 2-player duels.' });
     } else if (b.action === 'dare') {
       if (d.start) return res.status(409).json({ error: 'The duel has already started.' });
       await redis([['SET', k + ':p' + slot, JSON.stringify({ ...me, dare: filterText(clean(b.dare, 120)), dareOk: false }), 'KEEPTTL']]);
@@ -233,7 +243,7 @@ export default async function handler(req, res) {
       // Report the other player: saves the duel's recent chat for review (once per player per duel)
       const [first] = await redis([['SET', k + ':rep:' + slot, '1', 'EX', String(TTL), 'NX']]);
       if (first) {
-        const o = 1 - slot, rep = { at: Date.now(), code, by: d.p[slot] && d.p[slot].name, byPid: d.p[slot] && d.p[slot].pid || null,
+        const o = d.max > 2 && Number.isInteger(b.about) && b.about >= 0 && b.about < d.max && b.about !== slot ? b.about : (slot === 0 ? 1 : 0), rep = { at: Date.now(), code, by: d.p[slot] && d.p[slot].name, byPid: d.p[slot] && d.p[slot].pid || null,
           about: d.p[o] && d.p[o].name, aboutPid: d.p[o] && d.p[o].pid || null, reason: clean(b.reason, 200),
           chat: d.chat.slice(-30).map(m => ({ who: d.p[m.s] && d.p[m.s].name, t: m.t, at: m.at })) };
         await redis([['LPUSH', 'reports', JSON.stringify(rep)], ['LTRIM', 'reports', '0', '499']]);
@@ -241,6 +251,13 @@ export default async function handler(req, res) {
       }
     } else if (b.action === 'final') {
       // First phone to reach full time records the result; it counts once for both profiles
+      if (d.max > 2) {
+        if (!d.p.every(p => p && p.ready)) return res.status(409).json({ error: 'The game has not started.' });
+        const tot = (Array.isArray(b.tot) ? b.tot : []).slice(0, d.max).map(v => Math.max(-9999, Math.min(9999, Math.round(Number(v) || 0))));
+        await redis([['SET', k + ':final', JSON.stringify({ tot, by: slot, at: Date.now() }), 'EX', String(TTL), 'NX']]);
+        const d4 = await load(code);
+        return res.status(200).json({ state: view(d4, slot) });
+      }
       const other = d.p[1 - slot];
       if (!me.ready || !other || !other.ready) return res.status(409).json({ error: 'The duel has not started.' });
       const tot = (Array.isArray(b.tot) ? b.tot : []).slice(0, 2).map(v => Math.max(-9999, Math.min(9999, Math.round(Number(v) || 0))));
@@ -263,10 +280,9 @@ export default async function handler(req, res) {
       }
     } else if (b.action === 'start') {
       // First phone to open the live match records the starting point; the other phone reuses it.
-      const other = d.p[1 - slot];
-      if (!me.ready || !other || !other.ready) return res.status(409).json({ error: 'Both players must lock their picks first.' });
+      if (!d.p.every(p => p && p.ready)) return res.status(409).json({ error: 'Everyone must lock their picks first.' });
       const s = b.start || {};
-      const ids = new Set([...(me.picks || []), ...(other.picks || [])]);
+      const ids = new Set(d.p.flatMap(p => p.picks || []));
       const num = v => Math.max(0, Math.min(999, Math.floor(Number(v) || 0)));
       const base = {};
       for (const [id, st] of Object.entries(s.base || {})) {
