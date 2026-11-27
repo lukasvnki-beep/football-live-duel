@@ -55,9 +55,22 @@ async function mailReport(r) {
 
 async function load(code) {
   const k = 'duel:' + code;
-  const [meta, p0, p1, start, coin, d0, d1, d2, d3, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start', k + ':coin', k + ':dp:0', k + ':dp:1', k + ':dp:2', k + ':dp:3'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
+  const [meta, p0, p1, start, coin, d0, d1, d2, d3, pen0, pen1, powers, chat] = await redis([['MGET', k + ':meta', k + ':p0', k + ':p1', k + ':start', k + ':coin', k + ':dp:0', k + ':dp:1', k + ':dp:2', k + ':dp:3', k + ':pen:0', k + ':pen:1'], ['LRANGE', k + ':powers', '0', '-1'], ['LRANGE', k + ':chat', '-60', '-1']]).then(([m, pw, ch]) => [...m, pw, ch]);
   if (!meta) return null;
-  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, coin: coin ? JSON.parse(coin) : null, dp: [d0, d1, d2, d3].filter(Boolean).map(x => JSON.parse(x)), chat: (chat || []).map(x => JSON.parse(x)) };
+  return { meta: JSON.parse(meta), p: [p0 ? JSON.parse(p0) : null, p1 ? JSON.parse(p1) : null], powers: (powers || []).map(x => JSON.parse(x)), start: start ? JSON.parse(start) : null, coin: coin ? JSON.parse(coin) : null, dp: [d0, d1, d2, d3].filter(Boolean).map(x => JSON.parse(x)), pen: [pen0, pen1].map(x => x ? JSON.parse(x) : null), chat: (chat || []).map(x => JSON.parse(x)) };
+}
+
+// Half-time penalty shootout: each phone takes 5 kicks against the computer keeper; more goals wins ×2 for 5 min.
+// If one player has played and the other hasn't 2 minutes later, the one who played wins.
+const PEN_MS = 120000;
+function penView(d, slot) {
+  const p = d.pen || [null, null];
+  if (!p[0] && !p[1]) return null;
+  let done = false, winner = null;
+  if (p[0] && p[1]) { done = true; winner = p[0].g > p[1].g ? 0 : p[1].g > p[0].g ? 1 : null; }
+  else { const one = p[0] ? 0 : 1; if (Date.now() - p[one].at > PEN_MS) { done = true; winner = one; } }
+  const first = p[0] && p[1] ? Math.min(p[0].at, p[1].at) : (p[0] || p[1]).at;
+  return { played: [!!p[0], !!p[1]], goals: p.map((x, i) => x && (done || i === slot) ? x.g : null), done, winner, left: done ? 0 : Math.max(0, PEN_MS - (Date.now() - first)) };
 }
 
 // What a given player is allowed to see
@@ -71,7 +84,7 @@ function view(d, slot) {
     dareOk: !!p.dareOk,
     capt: (both || i === slot) ? (p.capt === 1 ? 1 : 0) : 0,
   });
-  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, draft: d.coin ? { first: d.coin.first, picks: d.dp } : null, chat: slot >= 0 ? d.chat : [] };
+  return { code: d.meta.code, fx: d.meta.fx, teams: d.meta.teams, slot, both, players, powers: d.powers, start: both ? d.start : null, draft: d.coin ? { first: d.coin.first, picks: d.dp } : null, chat: slot >= 0 ? d.chat : [], pen: both ? penView(d, slot) : null };
 }
 
 // Link a duel player to their profile (api/league.js) so the result counts in the rankings
@@ -278,6 +291,14 @@ export default async function handler(req, res) {
           pl: b.pl && typeof b.pl === 'object' ? { id: b.in, team: clean(b.pl.team, 12), name: clean(b.pl.name, 60), pos: clean(b.pl.pos, 4), num: clean(b.pl.num, 3) } : null });
       }
       await redis([['RPUSH', k + ':powers', JSON.stringify(p)], ['EXPIRE', k + ':powers', String(TTL)]]);
+    } else if (b.action === 'pen') {
+      const other = d.p[1 - slot];
+      if (!me.ready || !other || !other.ready) return res.status(409).json({ error: 'The duel has not started.' });
+      if (d.pen[slot]) return res.status(409).json({ error: 'You already took your penalties.' });
+      const o = d.pen[1 - slot];
+      if (o && Date.now() - o.at > PEN_MS) return res.status(409).json({ error: 'Too late: the 2 minutes are over.' });
+      const g = Math.max(0, Math.min(5, Math.floor(Number(b.goals) || 0)));
+      await redis([['SET', k + ':pen:' + slot, JSON.stringify({ g, at: Date.now() }), 'EX', String(TTL), 'NX']]);
     } else {
       return res.status(400).json({ error: 'Unknown action.' });
     }

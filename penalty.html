@@ -143,7 +143,7 @@ const T = {
     shooter:'tire',keeper:'au but',cpuShoots:'L’ordi va tirer…',cpuKeeps:'L’ordi est dans les buts',
     pass:'Passe le téléphone à',passS1:'C’est à toi de tirer. ',passS2:'C’est toi le gardien. ',noLook:'ne regarde pas !',ready:'Je suis prêt',
     goal:'But !',save:'Arrêt !',sd:'Mort subite',kick:'Tir',
-    wins:'gagne !',youWin:'Tu as gagné !',youLose:'Perdu…',rewardTxt:'🎁 Plus tard : le gagnant de la mi-temps reçoit ×2 points pendant 5 min ou un bonus en plus.',
+    wins:'gagne !',youWin:'Tu as gagné !',youLose:'Perdu…',rewardTxt:'🎁 Le gagnant de la mi-temps marque ×2 points pendant 5 min.',boost:'⚡ ×2 pendant 5 min au début de la 2e mi-temps',noBoost:'Pas de ×2 cette fois.',back:'Retour au match',soloT:'5 tirs contre le gardien. Celui qui marque le plus gagne.',scoredN:'buts marqués',wait:'On attend ton adversaire…',
     again:'Rejouer',menu:'Changer de mode',proto:'Prototype · test'},
   en:{title1:'Penalty',title2:'shootout',sub:'The half-time mini-game. 3 kicks each, the winner gets a power-up.',
     vsCpu:'Vs the computer',vsCpuS:'Practise on your own',same:'2 players',sameS:'On the same phone',
@@ -153,7 +153,7 @@ const T = {
     shooter:'shoots',keeper:'in goal',cpuShoots:'The CPU is about to shoot…',cpuKeeps:'The CPU is in goal',
     pass:'Pass the phone to',passS1:'Your turn to shoot. ',passS2:'You are the keeper. ',noLook:'don’t look!',ready:'I’m ready',
     goal:'Goal!',save:'Saved!',sd:'Sudden death',kick:'Kick',
-    wins:'wins!',youWin:'You win!',youLose:'You lose…',rewardTxt:'🎁 Later: the half-time winner gets ×2 points for 5 min or an extra power-up.',
+    wins:'wins!',youWin:'You win!',youLose:'You lose…',rewardTxt:'🎁 The half-time winner scores ×2 points for 5 min.',boost:'⚡ ×2 for 5 min at the start of the 2nd half',noBoost:'No ×2 this time.',back:'Back to the match',soloT:'5 kicks against the keeper. Whoever scores more wins.',scoredN:'goals scored',wait:'Waiting for your opponent…',
     again:'Play again',menu:'Change mode',proto:'Prototype · test'},
   es:{title1:'Tanda de',title2:'penaltis',sub:'El minijuego del descanso. 3 tiros cada uno, el ganador gana un poder.',
     vsCpu:'Contra la máquina',vsCpuS:'Practica solo',same:'2 jugadores',sameS:'En el mismo móvil',
@@ -163,7 +163,7 @@ const T = {
     shooter:'tira',keeper:'en la portería',cpuShoots:'La máquina va a tirar…',cpuKeeps:'La máquina está en la portería',
     pass:'Pasa el móvil a',passS1:'Te toca tirar. ',passS2:'Eres el portero. ',noLook:'¡no mires!',ready:'Estoy listo',
     goal:'¡Gol!',save:'¡Parada!',sd:'Muerte súbita',kick:'Tiro',
-    wins:'¡gana!',youWin:'¡Has ganado!',youLose:'Has perdido…',rewardTxt:'🎁 Más adelante: el ganador del descanso recibe ×2 puntos durante 5 min o un poder extra.',
+    wins:'¡gana!',youWin:'¡Has ganado!',youLose:'Has perdido…',rewardTxt:'🎁 El ganador del descanso suma ×2 puntos durante 5 min.',boost:'⚡ ×2 durante 5 min al inicio de la 2ª parte',noBoost:'Esta vez no hay ×2.',back:'Volver al partido',soloT:'5 tiros contra el portero. Gana quien marque más.',scoredN:'goles marcados',wait:'Esperando a tu rival…',
     again:'Otra vez',menu:'Cambiar modo',proto:'Prototipo · prueba'}
 };
 let lang = (S && S.lang && S.lang()) || (navigator.language || 'fr').slice(0,2);
@@ -220,21 +220,27 @@ const DIRS = ['left','center','right'];
 
 // ---------- State ----------
 const app = $('#app');
-let mode = 'cpu';           // 'cpu' or 'same'
+let mode = 'cpu';           // 'cpu', 'same', or 'solo' (online duel: 5 kicks against the computer keeper)
 let names = ['', ''];
+// Inside the duel at half-time: /penalty.html?embed=1&mode=cpu|same|solo&n0=..&n1=..
+const Q = new URLSearchParams(location.search), EMBED = Q.get('embed') === '1';
+if (EMBED) { mode = ['cpu','same','solo'].includes(Q.get('mode')) ? Q.get('mode') : 'cpu'; names = [Q.get('n0') || '', Q.get('n1') || '']; }
+const SOLO_KICKS = 5;
+const tell = m => { try { if (EMBED && window.parent !== window) window.parent.postMessage({ src:'fld-pen', ...m }, location.origin); } catch (e) {} };
 let g = null;               // current game
 let busy = false;
 
 function newGame(){
   const n0 = names[0].trim() || (mode === 'cpu' ? t('you') : t('p1'));
-  const n1 = mode === 'cpu' ? t('cpu') : (names[1].trim() || t('p2'));
+  const n1 = mode === 'cpu' || mode === 'solo' ? t('cpu') : (names[1].trim() || t('p2'));
   g = { names:[n0,n1], kicks:[[],[]], turn:0, over:false, winner:null, sd:false };
 }
 const goals = p => g.kicks[p].filter(Boolean).length;
-const isCpu = p => mode === 'cpu' && p === 1;
+const isCpu = p => (mode === 'cpu' || mode === 'solo') && p === 1;
 
 // Is the shootout decided? (3 kicks each, then sudden death)
 function decided(){
+  if (mode === 'solo') return g.kicks[0].length >= SOLO_KICKS ? 0 : null;
   const [a, b] = g.kicks, ga = goals(0), gb = goals(1);
   if (a.length <= 3 && b.length <= 3) {
     const leftA = 3 - a.length, leftB = 3 - b.length;
@@ -281,7 +287,7 @@ function bindLang(redraw){
 }
 
 function dotsHtml(p){
-  const ks = g.kicks[p], total = Math.max(3, ks.length + (g.turn === p && !g.over ? 1 : 0), g.kicks[1-p].length);
+  const ks = g.kicks[p], total = mode === 'solo' ? (p === 0 ? SOLO_KICKS : 0) : Math.max(3, ks.length + (g.turn === p && !g.over ? 1 : 0), g.kicks[1-p].length);
   let h = '';
   for (let i = 0; i < total; i++) {
     if (i < ks.length) h += `<span class="dot ${ks[i]?'g':'m'}">${ks[i]?'✓':'✕'}</span>`;
@@ -290,7 +296,7 @@ function dotsHtml(p){
   return h;
 }
 function boardHtml(){
-  const sd = g.kicks[0].length >= 3 && g.kicks[1].length >= 3 && !g.over || g.sd;
+  const sd = mode !== 'solo' && g.kicks[0].length >= 3 && g.kicks[1].length >= 3 && !g.over || g.sd;
   return `<div class="board">
     <div class="side ${g.turn===0&&!g.over?'active':''}"><div class="nm"><i style="background:var(--accent)"></i>${esc(g.names[0])}</div><div class="dots">${dotsHtml(0)}</div></div>
     <div class="score">${goals(0)}–${goals(1)}${sd?`<small>${t('sd')}</small>`:''}</div>
@@ -348,11 +354,15 @@ const cpuPick = () => DIRS[Math.floor(Math.random() * 3)];
 async function nextKick(){
   drawBoard();
   const sh = g.turn, kp = 1 - sh, n = g.kicks[sh].length + 1;
-  $('#tag').textContent = (n > 3 ? t('sd') + ' · ' : '') + t('kick') + ' ' + n;
+  $('#tag').textContent = (n > 3 && mode !== 'solo' ? t('sd') + ' · ' : '') + t('kick') + ' ' + n;
   resetStage();
   $('#picks').innerHTML = picksHtml(); $('#picks').querySelectorAll('button').forEach(b => b.disabled = true);
   let shot, dive;
-  if (mode === 'cpu') {
+  if (mode === 'solo') {
+    shot = await ask('shoot', g.names[0]);
+    $('#prompt').innerHTML = `<h2>&nbsp;</h2><div class="muted">${t('cpuKeeps')}</div>`;
+    dive = cpuPick();
+  } else if (mode === 'cpu') {
     if (isCpu(sh)) {
       $('#prompt').innerHTML = `<h2>${t('dive')}</h2><div class="muted">${t('cpuShoots')}</div>`;
       dive = await ask('keep', g.names[kp]); shot = cpuPick();
@@ -375,7 +385,7 @@ async function nextKick(){
   const w = decided();
   if (w !== null) { g.over = true; g.winner = w; drawBoard(); await sleep(400); return end(); }
   if (g.kicks[0].length >= 3 && g.kicks[1].length >= 3) g.sd = true;
-  g.turn = kp;
+  g.turn = mode === 'solo' ? 0 : kp;
   await sleep(250);
   nextKick();
 }
@@ -442,6 +452,7 @@ function showBanner(kind){
 }
 
 function end(){
+  if (EMBED) return endEmbed();
   const w = g.winner, human = mode === 'cpu';
   const won = human ? w === 0 : true;
   sfx(won ? 'win' : 'lose'); buzz(won ? [60,60,120] : 120);
@@ -459,7 +470,28 @@ function end(){
   $('#tomenu').onclick = () => { ov.remove(); menu(); };
 }
 
-menu();
+function endEmbed(){
+  const w = g.winner, gl = [goals(0), goals(1)];
+  tell({ type:'result', mode, winner: mode === 'solo' ? null : w, goals: gl });
+  let big, title, sub;
+  if (mode === 'solo') { big = '⚽'; title = gl[0] + ' / ' + SOLO_KICKS; sub = t('scoredN') + ' · ' + t('wait'); }
+  else {
+    const won = mode === 'cpu' ? w === 0 : true;
+    big = won ? '🏆' : '😬'; title = mode === 'cpu' ? (won ? t('youWin') : t('youLose')) : `${esc(g.names[w])} ${t('wins')}`;
+    sub = `${esc(g.names[w])} · ${t('boost')}`;
+  }
+  sfx(big === '😬' ? 'lose' : 'win'); buzz(big === '😬' ? 120 : [60,60,120]);
+  const ov = document.createElement('div'); ov.className = 'ov';
+  ov.innerHTML = `<div class="in"><div class="big">${big}</div><h2>${title}</h2>
+    ${mode === 'solo' ? '' : `<div class="final">${gl[0]} – ${gl[1]}</div>`}
+    <div class="reward">${sub}</div>
+    <button class="btn" id="back">${t('back')}</button></div>`;
+  app.appendChild(ov);
+  $('#back').onclick = () => tell({ type:'close' });
+}
+
+if (EMBED) { document.documentElement.classList.add('embed'); newGame(); game(); }
+else menu();
 })();
 </script>
 </body>
