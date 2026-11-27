@@ -1918,27 +1918,29 @@ function evShort(e,i){
   return ['',''];
 }
 let freshT=null;
+// Only touch the page when a block really changed (less work for the phone, and for the translator)
+function setHTML(el,h){if(el&&el._h!==h){el._h=h;el.innerHTML=h}}
 function updateLive(before){
   const E=S.eng;if(!document.getElementById('board'))return;
   cpuPowers();reactToFeed();
   const tot=totals();
-  document.getElementById('mstrip').innerHTML=mstrip();
-  document.getElementById('board').innerHTML=duelPanel(true);
+  setHTML(document.getElementById('mstrip'),mstrip());
+  setHTML(document.getElementById('board'),duelPanel(true));
   if(before){SIDES().forEach((i,n)=>{if(before[i]!==tot[i]){const el=document.querySelectorAll('.duel .tot')[n];if(el)el.classList.add('bump')}})}
-  document.getElementById('pbar').innerHTML=pbar();
+  setHTML(document.getElementById('pbar'),pbar());
   // Half-time totals (for the comeback badge), Final 10' banner
   if(!S.htTot&&nowMatchMin(E)>=46)S.htTot=tot.slice();
   const f10=inF10(E);if(f10&&!S.f10Seen){S.f10Seen=true;buzz([100,50,100]);fx('f10');toast('🔥 Final 10 minutes: every point counts ×2, power-ups are locked')}
   penTick();
-  document.getElementById('banner').innerHTML=f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':penBanner();bindPen();
+  setHTML(document.getElementById('banner'),f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':penBanner());bindPen();
   drawSheet();
   const eb=document.getElementById('errbox');
-  eb.innerHTML=E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'';
+  setHTML(eb,E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'');
   const [L,R]=SIDES();
   const ev=[...E.shown(),...S.pwFeed].sort((x,y)=>y.ord-x.ord);
   const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*evMult(i,e);const [h,w]=evShort(e,i);
     return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
-  document.getElementById('feed').innerHTML=ev.length?ev.map(e=>{
+  setHTML(document.getElementById('feed'),ev.length?ev.map(e=>{
     let on=ALL().map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
     const mc=`<span class="mc">${esc(String(e.lbl||'').replace('′',''))}′</span>`;
     if(multi()){const [h,w]=evShort(e,null);
@@ -1946,7 +1948,7 @@ function updateLive(before){
       return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}${cs?'<div class="mchips">'+cs+'</div>':''}</div></div>`}
     if(!on[0]&&!on[1]){const [h,w]=evShort(e,null);return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}</div></div>`}
     return `<div class="tr ${e.type==='var'?'void':''}">${on[L]?cell(e,L,'l'):'<span></span>'}${mc}${on[R]?cell(e,R,'r'):'<span></span>'}</div>`}).join('')
-    :`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':E.kind==='real'&&!E.replay&&!LIVE.has(E.status)&&!FINAL.has(E.status)?'Waiting for kickoff. Your players\' actions will show up here.':'Goals, assists and cards will show up here as they happen.'}</div>`;
+    :`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':E.kind==='real'&&!E.replay&&!LIVE.has(E.status)&&!FINAL.has(E.status)?'Waiting for kickoff. Your players\' actions will show up here.':'Goals, assists and cards will show up here as they happen.'}</div>`);
   if(E.kind==='real'&&!E.replay){
     const fr=()=>{const el=document.getElementById('fresh');if(!el||S.eng!==E){clearInterval(freshT);return}
       const ago=E.lastFetch?Math.round((Date.now()-E.lastFetch)/1000):null;const nx=E.nextAt?Math.max(0,Math.round((E.nextAt-Date.now())/1000)):null;
