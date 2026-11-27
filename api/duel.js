@@ -12,6 +12,7 @@
 
 import crypto from 'node:crypto';
 import { filterText } from './_filter.js';
+import { checkGame, addGame, ipWho } from './_plan.js';
 
 const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -81,6 +82,15 @@ async function profileId(pid, ptok) {
   return (p.tok === hashTok(ptok) || (p.toks || []).includes(hashTok(ptok))) ? pid : null;
 }
 
+// Who is playing, for the free plan limit: the profile (with premium flag), or the network address without one
+async function player(pid, ptok, ip) {
+  const id = await profileId(pid, ptok);
+  if (!id) return { id: null, who: ipWho(ip), p: null };
+  const [v] = await redis([['GET', 'pl:' + id]]);
+  return { id, who: id, p: v ? JSON.parse(v) : null };
+}
+const LIMIT = 402; // free plan limit reached: the app shows the Go premium screen
+
 function slotOf(d, token) {
   const h = hashTok(token);
   return d.p.findIndex(p => p && p.tok === h);
@@ -112,14 +122,18 @@ export default async function handler(req, res) {
       if (!/^\d{1,9}$/.test(String(fx.apiId || ''))) return res.status(400).json({ error: 'Invalid match.' });
       const teams = {};
       for (const [k, t] of Object.entries(b.teams || {}).slice(0, 2)) teams[clean(k, 12)] = { name: clean(t.name, 60), short: clean(t.short, 4), color: clean(t.color, 30) };
+      const pl = await player(b.pid, b.ptok, ip);
+      const stop = await checkGame(redis, pl.who, pl.p);
+      if (stop) return res.status(LIMIT).json({ error: stop, limit: true });
       const meta = { code: newCode(), created: Date.now(), teams,
         fx: { id: 'r' + fx.apiId, apiId: Number(fx.apiId), kind: 'real', home: clean(fx.home, 12), away: clean(fx.away, 12), comp: clean(fx.comp, 80), leagueId: Number(fx.leagueId) || 0, kickoff: clean(fx.kickoff, 40), status: clean(fx.status, 6), elapsed: Number(fx.elapsed) || null, goals: { home: null, away: null }, homeTeam: { id: Number(fx.homeTeam && fx.homeTeam.id) || 0, name: clean(fx.homeTeam && fx.homeTeam.name, 60) }, awayTeam: { id: Number(fx.awayTeam && fx.awayTeam.id) || 0, name: clean(fx.awayTeam && fx.awayTeam.name, 60) } } };
       const token = crypto.randomBytes(18).toString('hex');
       const k = 'duel:' + meta.code;
       await redis([
         ['SET', k + ':meta', JSON.stringify(meta), 'EX', String(TTL)],
-        ['SET', k + ':p0', JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player 1', tok: hashTok(token), pid: await profileId(b.pid, b.ptok) }), 'EX', String(TTL)],
+        ['SET', k + ':p0', JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player 1', tok: hashTok(token), pid: pl.id }), 'EX', String(TTL)],
       ]);
+      await addGame(redis, pl.who, pl.p);
       const d = await load(meta.code);
       return res.status(200).json({ token, state: view(d, 0) });
     }
@@ -137,9 +151,12 @@ export default async function handler(req, res) {
         return res.status(409).json({ error: 'Two players are already in this duel.' });
       }
       const token = crypto.randomBytes(18).toString('hex');
-      const pid = await profileId(b.pid, b.ptok);
+      const pl = await player(b.pid, b.ptok, ip), pid = pl.id;
+      const stop = await checkGame(redis, pl.who, pl.p);
+      if (stop) return res.status(LIMIT).json({ error: stop, limit: true });
       const ok = await redis([['SET', k + ':p1', JSON.stringify({ name: filterText(clean(b.name, 14)) || 'Player 2', tok: hashTok(token), pid }), 'EX', String(TTL), 'NX']]);
       if (!ok[0]) return res.status(409).json({ error: 'Two players are already in this duel.' });
+      await addGame(redis, pl.who, pl.p);
       // Coin flip: decides who picks first
       if (b.draft) await redis([['SET', k + ':coin', JSON.stringify({ first: crypto.randomInt(2), at: Date.now() }), 'EX', String(TTL), 'NX']]);
       const d2 = await load(code);
