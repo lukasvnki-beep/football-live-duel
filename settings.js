@@ -13,6 +13,27 @@
   // One line per text: English | French | Spanish
   const DICT = `
 Play|Jouer|Jugar
+⚽ Penalty shootout|⚽ Tirs au but|⚽ Penaltis
+⚽ Half-time penalty shootout|⚽ Tirs au but de la mi-temps|⚽ Penaltis del descanso
+Take the penalties|Tirer les penalties|Tirar los penaltis
+5 kicks against the keeper. Whoever scores more gets ×2 for 5 min at the start of the 2nd half.|5 tirs contre le gardien. Celui qui marque le plus gagne ×2 pendant 5 min au début de la 2e mi-temps.|5 tiros contra el portero. Quien marque más gana ×2 durante 5 min al inicio de la 2ª parte.
+Your opponent has played. You have 2 minutes.|Ton adversaire a joué. Tu as 2 minutes.|Tu rival ya ha jugado. Tienes 2 minutos.
+Your goals:|Tes buts :|Tus goles:
+Waiting for your opponent…|On attend ton adversaire…|Esperando a tu rival…
+Draw: no ×2 this time.|Égalité : pas de ×2 cette fois.|Empate: esta vez no hay ×2.
+No shootout this time.|Pas de tirs au but cette fois.|Esta vez no hay penaltis.
+wins ×2 for 5 min at the start of the 2nd half|gagne ×2 pendant 5 min au début de la 2e mi-temps|gana ×2 durante 5 min al inicio de la 2ª parte
+won the penalty shootout: ×2 for 5 min|a gagné les tirs au but : ×2 pendant 5 min|ha ganado los penaltis: ×2 durante 5 min
+Beat the computer to get ×2 for 5 min at the start of the 2nd half. If you don't play within 2 minutes, the computer wins.|Bats l’ordi pour gagner ×2 pendant 5 min au début de la 2e mi-temps. Si tu ne joues pas dans les 2 minutes, l’ordi gagne.|Gana a la máquina para tener ×2 durante 5 min al inicio de la 2ª parte. Si no juegas en 2 minutos, gana la máquina.
+Both players, on this phone. The winner gets ×2 for 5 min at the start of the 2nd half.|Les deux joueurs, sur ce téléphone. Le gagnant a ×2 pendant 5 min au début de la 2e mi-temps.|Los dos jugadores, en este móvil. El ganador tiene ×2 durante 5 min al inicio de la 2ª parte.
+⏱ Too late: the computer wins the penalty shootout|⏱ Trop tard : l’ordi gagne les tirs au but|⏱ Demasiado tarde: la máquina gana los penaltis
+⚽ Penalty shootout (×2)|⚽ Tirs au but (×2)|⚽ Penaltis (×2)
+Won the half-time shootout: points from 46′ to 50′ count double|Tirs au but gagnés : les points de la 46′ à la 50′ comptent double|Penaltis ganados: los puntos del 46′ al 50′ cuentan doble
+⚽ Half-time penalties.|⚽ Tirs au but à la mi-temps.|⚽ Penaltis en el descanso.
+At half-time, take a penalty shootout. The winner scores ×2 for 5 minutes at the start of the 2nd half. If you don't play within 2 minutes, your opponent wins.|À la mi-temps, joue les tirs au but. Le gagnant marque ×2 pendant 5 minutes au début de la 2e mi-temps. Si tu ne joues pas dans les 2 minutes, ton adversaire gagne.|En el descanso, juega los penaltis. El ganador suma ×2 durante 5 minutos al inicio de la 2ª parte. Si no juegas en 2 minutos, gana tu rival.
+Penalty shootout|Tirs au but|Penaltis
+You already took your penalties.|Tu as déjà tiré tes penalties.|Ya has tirado tus penaltis.
+Too late: the 2 minutes are over.|Trop tard : les 2 minutes sont passées.|Demasiado tarde: los 2 minutos han pasado.
 Friends|Amis|Amigos
 Ranking|Classement|Ranking
 Profile|Profil|Perfil

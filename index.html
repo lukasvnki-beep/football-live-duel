@@ -463,6 +463,12 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 @keyframes conf{to{transform:translate(var(--dx),105vh) rotate(720deg)}}
 .shake{animation:shake .45s}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.pen{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:linear-gradient(160deg,#123a33,var(--panel,#111f31));border:1px solid var(--accent,#64efb0)}
+.pen b{font-family:var(--display);font-size:1.15rem;text-transform:uppercase}.pen .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.pen .cd{font-family:var(--display);font-weight:800;font-size:1.2rem;color:var(--gold,#ffd77c)}
+.boost{text-align:center;font-family:var(--display);font-weight:900;letter-spacing:1px;padding:9px 12px;border-radius:14px;color:#04261a;background:linear-gradient(90deg,#64efb0,#ffd77c,#64efb0)}
+#penov{position:fixed;inset:0;z-index:80;background:#08111e}#penov iframe{border:0;width:100%;height:100%}
+#penov .x{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:10px;z-index:2;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:1.1rem}
 .f10{text-align:center;font-family:var(--display);font-weight:900;letter-spacing:1px;padding:9px 12px;border-radius:14px;color:#2a1000;background:linear-gradient(90deg,#ff7a3c,#ffd77c,#ff7a3c);background-size:200% 100%;animation:f10 2s linear infinite;box-shadow:0 0 22px rgba(255,140,60,.45)}
 @keyframes f10{to{background-position:-200% 0}}
 /* Badges */
@@ -1065,7 +1071,7 @@ const DARES=['Buys the next kebab','Wears my team\'s shirt tomorrow','Posts the 
 const POWER={double:{dur:10,label:'Double Points',icon:'⚡',desc:'One of your players scores ×2 for 10 min'},neg:{dur:5,label:'Negative Points',icon:'☠',desc:'One of their players scores minus for 5 min'},shield:{dur:15,label:'Shield',icon:'🛡',desc:'Blocks the next Negative Points used on you in the next 15 min'}};
 const PTYPES=['double','neg','shield'];
 const CAPTAIN=false; // Lukas: no captain for now
-function resetPowers(){S.powers=[];S.swaps=[];S.htTot=null;S.f10Seen=false;S.pwPick=null;S.pwFeed=[];const r=(a,b)=>a+Math.floor(Math.random()*(b-a));S.cpuPlan={double:r(12,70),neg:r(15,78),shield:r(10,60)}}
+function resetPowers(){S.powers=[];S.swaps=[];S.htTot=null;S.f10Seen=false;S.pwPick=null;S.pwFeed=[];const r=(a,b)=>a+Math.floor(Math.random()*(b-a));S.cpuPlan={double:r(12,70),neg:r(15,78),shield:r(10,60)};S.pen=null;S.penSeen=false}
 resetPowers();
 function nowMin(E){if(E.kind==='sim')return E.cursor+1;if(E.replay&&!E.final)return E.cursor;return E.elapsed||0}
 function inPlay(E){
@@ -1140,6 +1146,61 @@ function f10Bonus(i){const E=S.eng;if(!E||!E.shown)return 0;let v=0;
     if(e.spread){v+=Math.round(p*Math.max(0,(E.maxMin||90)-F10)/(E.maxMin||90))}else if(matchMin(e)>=F10)v+=p});
   return v}
 
+// ================= Half-time penalty shootout =================
+// At half-time both players can take a penalty shootout (penalty.html in a full-screen frame).
+// The winner scores ×2 for 5 minutes at the start of the 2nd half (46′ to 50′), so it never overlaps the Final 10′.
+// Against the computer or on one phone: a normal shootout. Online: each phone takes 5 kicks against the computer keeper,
+// more goals wins. If one player doesn't play within 2 minutes, the other wins (online: 2 minutes after the first one played).
+const PEN_MS=120000,PEN_FROM=46,PEN_DUR=5;
+function atHT(E){if(!E||E.final)return false;if(E.kind==='sim')return E.cursor===E.htIdx&&E.htWait>0;if(E.replay)return E.cursor===45&&E.htWait>0;return E.status==='HT'}
+function in2H(E){if(!E)return false;if(E.kind==='sim')return E.cursor>E.htIdx;return nowMin(E)>=46&&!atHT(E)}
+function penOnline(){return S.mode==='online'&&S.online&&S.online.state?S.online.state.pen||null:null}
+function penWin(){if(S.mode==='online'){const p=penOnline();return p&&p.done?p.winner:null}return S.pen&&S.pen.res?S.pen.res.winner:null}
+function penDone(){if(S.mode==='online'){const p=penOnline();return !!(p&&p.done)}return !!(S.pen&&S.pen.res)}
+function boostOn(E){const w=penWin();return w!=null&&!!E&&!E.final&&in2H(E)&&nowMatchMin(E)<PEN_FROM+PEN_DUR}
+const inBoost=e=>!e.spread&&(e.half==null||e.half===2)&&matchMin(e)>=PEN_FROM&&matchMin(e)<PEN_FROM+PEN_DUR&&matchMin(e)<F10;
+function evMult(i,e){if(!e.spread&&matchMin(e)>=F10)return 2;return penWin()===i&&inBoost(e)?2:1}
+function penBonus(i){if(penWin()!==i)return 0;const E=S.eng;if(!E||!E.shown)return 0;let v=0;
+  E.shown().forEach(e=>{if(e.type==='power'||e.type==='swap')return;const p=sideEvPts(i,e);if(!p)return;
+    if(e.spread)v+=Math.round(p*PEN_DUR/(E.maxMin||90));else if(inBoost(e))v+=p});
+  return v}
+// Sim / replay: the clock waits at half-time while the shootout is open (2 minutes at most)
+function penHold(E){return S.mode!=='online'&&atHT(E)&&!!S.pen&&!S.pen.res}
+// Open the offer at half-time, and settle it when the 2 minutes run out
+function penTick(){const E=S.eng;if(!E)return;
+  if(S.mode==='online'){const p=penOnline();if(p&&p.done&&!S.penSeen){S.penSeen=true;if(p.winner!=null){sfx('whistle');toast(`⚽ ${pname(p.winner)} won the penalty shootout: ×2 for 5 min`)}}return}
+  if(!S.pen&&atHT(E)){S.pen={at:Date.now(),res:null};sfx('whistle');saveActive()}
+  if(S.pen&&!S.pen.res&&Date.now()-S.pen.at>=PEN_MS){S.pen.res={winner:S.mode==='cpu'?1:null,late:true};closePen();saveActive();if(S.mode==='cpu')toast('⏱ Too late: the computer wins the penalty shootout')}
+}
+function penLeft(){if(S.mode==='online'){const p=penOnline();return p&&p.left!=null&&p.played&&(p.played[0]||p.played[1])?Math.max(0,p.left-(Date.now()-(S.online.penAt||Date.now()))):null}
+  return S.pen&&!S.pen.res?Math.max(0,PEN_MS-(Date.now()-S.pen.at)):null}
+const mmss=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function penBanner(){const E=S.eng;if(!E)return '';
+  if(boostOn(E)){const w=penWin(),left=PEN_FROM+PEN_DUR-nowMatchMin(E);return `<div class="boost" data-noi18n>⚽ ${esc(pname(w)).toUpperCase()} ×2 · ${left}′</div>`}
+  const me=S.mode==='online'&&S.online?S.online.slot:0;
+  if(S.mode==='online'){const p=penOnline();if(!(atHT(E)||(p&&!p.done)))return '';
+    if(p&&p.done)return atHT(E)?`<div class="pen"><b>⚽ Penalty shootout</b><span>${p.winner==null?'Draw: no ×2 this time.':`<b data-noi18n>${esc(pname(p.winner))}</b> <span>wins ×2 for 5 min at the start of the 2nd half</span>`}</span><span class="small muted" data-noi18n>${p.goals[0]} – ${p.goals[1]}</span></div>`:'';
+    if(p&&p.played[me]){const l=penLeft();return `<div class="pen"><b>⚽ Penalty shootout</b><span>Your goals: <b data-noi18n>${p.goals[me]}/5</b></span><span class="small muted">Waiting for your opponent…</span>${l!=null?`<span class="cd" data-noi18n id="pencd">${mmss(l)}</span>`:''}</div>`}
+    const l=penLeft();
+    return `<div class="pen"><b>⚽ Half-time penalty shootout</b><span class="small">5 kicks against the keeper. Whoever scores more gets ×2 for 5 min at the start of the 2nd half.</span>${l!=null?'<span class="small muted">Your opponent has played. You have 2 minutes.</span>':''}<div class="row"><button class="btn" id="penplay" style="flex:1">Take the penalties</button>${l!=null?`<span class="cd" data-noi18n id="pencd">${mmss(l)}</span>`:''}</div></div>`}
+  if(!S.pen||!atHT(E))return '';
+  if(S.pen.res){const w=S.pen.res.winner;return `<div class="pen"><b>⚽ Penalty shootout</b><span>${w==null?'No shootout this time.':`<b data-noi18n>${esc(pname(w))}</b> <span>wins ×2 for 5 min at the start of the 2nd half</span>`}</span></div>`}
+  const l=penLeft();
+  return `<div class="pen"><b>⚽ Half-time penalty shootout</b><span class="small">${S.mode==='cpu'?'Beat the computer to get ×2 for 5 min at the start of the 2nd half. If you don\'t play within 2 minutes, the computer wins.':'Both players, on this phone. The winner gets ×2 for 5 min at the start of the 2nd half.'}</span><div class="row"><button class="btn" id="penplay" style="flex:1">Take the penalties</button><span class="cd" data-noi18n id="pencd">${mmss(l)}</span></div></div>`}
+function bindPen(){const b=document.getElementById('penplay');if(b)b.onclick=openPen;
+  clearInterval(S.penT);if(document.getElementById('pencd'))S.penT=setInterval(()=>{const el=document.getElementById('pencd');if(!el||S.view!=='live'){clearInterval(S.penT);return}const l=penLeft();if(l==null)return;el.textContent=mmss(l);if(l<=0){clearInterval(S.penT);if(S.mode==='online')syncOnce();else updateLive()}},1000)}
+function openPen(){if(document.getElementById('penov'))return;
+  const mode=S.mode==='online'?'solo':S.mode==='cpu'?'cpu':'same';
+  const q=new URLSearchParams({embed:'1',mode,n0:(n=>n==='You'?'':n)(S.mode==='online'?pname(S.online.slot):pname(0)),n1:S.mode==='friend'?pname(1):''});
+  const ov=document.createElement('div');ov.id='penov';ov.innerHTML=`<iframe src="/penalty.html?${q}" title="Penalty shootout"></iframe><button class="x" aria-label="Close">✕</button>`;
+  ov.querySelector('.x').onclick=closePen;document.body.appendChild(ov)}
+function closePen(){document.getElementById('penov')?.remove();if(S.view==='live')updateLive()}
+window.addEventListener('message',ev=>{const d=ev.data;if(ev.origin!==location.origin||!d||d.src!=='fld-pen')return;
+  if(d.type==='close'){closePen();return}
+  if(d.type!=='result')return;
+  if(S.mode==='online'){const g=Math.max(0,Math.min(5,(d.goals&&d.goals[0])|0));onlinePost({action:'pen',goals:g}).catch(e=>toast(e.message));return}
+  if(!S.pen||S.pen.res)return;S.pen.res={winner:d.winner===1?1:0,goals:d.goals};saveActive()});
+
 // ================= Slots: who scores for each side over time =================
 // Each side has 2 slots. A slot changes hands when its player is subbed off (the player coming on takes over)
 // or when its owner uses the one swap per game. Each spell in a slot is a "seg".
@@ -1182,8 +1243,8 @@ function sideScore(i,t,a){
   let total=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,id)=>x+adjOf(id),0);
   const ck=CAPTAIN&&S.capt?S.capt[i]:null;let cap=0;
   if(ck!=null){const cs=rows.filter(r=>r.k===ck);const base=cs.reduce((x,r)=>x+r.pts,0)+[...new Set(cs.map(r=>r.id))].reduce((x,id)=>x+adjOf(id),0);cap=Math.round(base*0.5)}
-  const f10=f10Bonus(i);
-  return {rows,adjOf,cap,f10,total:total+cap+f10};
+  const f10=f10Bonus(i),pen=penBonus(i);
+  return {rows,adjOf,cap,f10,pen,total:total+cap+f10+pen};
 }
 function sideEvPts(i,e){if(!e.pts)return 0;return segsOf(i).reduce((x,g)=>x+(e.pts[g.id]&&segHas(g,e)?e.pts[g.id]:0),0)}
 function swapUsed(i){return (S.swaps||[]).some(w=>w.owner===i)}
@@ -1246,12 +1307,12 @@ function viewReveal(){
 function saveActive(){
   const f=S.fixture;if(f.kind!=='real')return;
   store.set('fld.active',{title:`${TEAMS[f.home].name} vs ${TEAMS[f.away].name}`,names:[pname(0),pname(1)],mode:S.mode,
-    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,capt:S.capt,swaps:S.swaps,htTot:S.htTot,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
+    fx:{...f},teams:{[f.home]:TEAMS[f.home],[f.away]:TEAMS[f.away]},picks:S.picks,players:[...S.picks[0],...S.picks[1]].map(id=>PL[id]),powers:S.powers,pwFeed:S.pwFeed,cpuPlan:S.cpuPlan,dares:S.dares,dareOk:S.dareOk,capt:S.capt,swaps:S.swaps,htTot:S.htTot,pen:S.pen,start:S.eng&&S.eng.kind==='real'?S.eng.kick:null});
 }
 function resumeDuel(){
   const a=store.get('fld.active',null);if(!a)return;
   Object.assign(TEAMS,a.teams);a.players.forEach(p=>{if(!PL[p.id])PL[p.id]=p});
-  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];S.capt=a.capt||[0,0];S.swaps=a.swaps||[];S.htTot=a.htTot||null;rebuildPwFeed();
+  S.fixture=a.fx;S.picks=a.picks;S.mode=a.mode;resetPowers();S.powers=a.powers||[];S.pwFeed=a.pwFeed||[];if(a.cpuPlan)S.cpuPlan=a.cpuPlan;S.dares=a.dares||['',''];S.dareOk=a.dareOk||[true,true];S.capt=a.capt||[0,0];S.swaps=a.swaps||[];S.htTot=a.htTot||null;S.pen=a.pen||null;rebuildPwFeed();
   if(a.mode==='friend')S.names=[a.names[0],a.names[1]];else S.names[0]=a.names[0];
   S.speed=1;S.paused=false;
   S.eng=realEngine(S.fixture,FINAL.has(S.fixture.status)&&!a.start,a.start);go('live');S.eng.start();
@@ -1271,7 +1332,7 @@ async function onlinePost(body){
   applyOnline(b.state);return b;
 }
 function applyOnline(st){
-  if(!st)return;S.online.state=st;gotChat(st.chat||[]);
+  if(!st)return;S.online.state=st;S.online.penAt=Date.now();gotChat(st.chat||[]);
   Object.entries(st.teams||{}).forEach(([k,t])=>{if(!TEAMS[k])TEAMS[k]=t});
   S.names=[(st.players[0]&&st.players[0].name)||'Player 1',(st.players[1]&&st.players[1].name)||''];
   st.players.forEach(p=>p&&(p.players||[]).forEach(x=>{if(!PL[x.id])PL[x.id]=x}));
@@ -1537,7 +1598,7 @@ function simEngine(f){
     }
   });
   events.forEach((e,i)=>{e.el=e.idx+1;e.ord=e.idx+1+i/10000;const mm=minutes[e.idx];if(mm){e.min=mm.m;e.half=mm.half}});
-  const E={kind:'sim',cursor:-1,htWait:0,done:false,sentOff:new Set(),minAt:i=>minutes[i]?minutes[i].m:90,
+  const E={kind:'sim',cursor:-1,htWait:0,htIdx:45+st1-1,done:false,sentOff:new Set(),minAt:i=>minutes[i]?minutes[i].m:90,
     shown(){return events.filter(e=>e.idx<=E.cursor)},
     clock(){const ht=E.cursor===45+st1-1&&E.htWait>0;return {min:E.cursor<0?'0′':minutes[E.cursor]?label(minutes[E.cursor].half,minutes[E.cursor].m):'FT',status:S.paused?'Paused':ht?'Half time':E.cursor<0?'Kickoff':E.cursor<=45+st1-1?'1st half':'2nd half',live:!S.paused&&!ht}},
     tally(){const pp={};let hs=0,as=0;E.shown().forEach(e=>{for(const k in e.pts)pp[k]=(pp[k]||0)+e.pts[k];if(e.type==='goal'||e.type==='og'){e.team===f.home?hs++:as++}if(e.type==='var'){e.team===f.home?hs--:as--}});return {pp,hs,as}},
@@ -1703,6 +1764,7 @@ function startTimer(){stopTimer();S.timer=setInterval(tick,1000/S.speed)}
 function stopTimer(){if(S.timer){clearInterval(S.timer);S.timer=null}}
 function tick(){
   const E=S.eng;if(!E||S.paused||S.view!=='live')return;
+  if(penHold(E)){updateLive();return}
   const before=totals();E.tick();
   if(E.done){finishDuel();return}
   updateLive(before);
@@ -1806,13 +1868,14 @@ function updateLive(before){
   // Half-time totals (for the comeback badge), Final 10' banner
   if(!S.htTot&&nowMatchMin(E)>=46)S.htTot=tot.slice();
   const f10=inF10(E);if(f10&&!S.f10Seen){S.f10Seen=true;buzz([100,50,100]);fx('f10');toast('🔥 Final 10 minutes: every point counts ×2, power-ups are locked')}
-  document.getElementById('banner').innerHTML=f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':'';
+  penTick();
+  document.getElementById('banner').innerHTML=f10?'<div class="f10">🔥 FINAL 10′ · EVERY POINT ×2</div>':penBanner();bindPen();
   drawSheet();
   const eb=document.getElementById('errbox');
   eb.innerHTML=E.err?`<div class="note err"><b>Update failed.</b> ${esc(E.err)} The score shown is from the last good update.</div>`:'';
   const [L,R]=SIDES();
   const ev=[...E.shown(),...S.pwFeed].sort((x,y)=>y.ord-x.ord);
-  const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*(!e.spread&&matchMin(e)>=F10?2:1);const [h,w]=evShort(e,i);
+  const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*evMult(i,e);const [h,w]=evShort(e,i);
     return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
   document.getElementById('feed').innerHTML=ev.length?ev.map(e=>{
     let on=[0,1].map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
@@ -1840,6 +1903,7 @@ function viewResult(){
     if(g.endHow==='sub')why.push(`subbed off ${g.to}`);if(g.endHow==='swap')why.push(`swapped out at ${g.to}`);
     return `<div class="brow"><span>${CAPTAIN&&(S.capt[i]||0)===g.k?'Ⓒ ':''}${esc(p.name)} <span class="muted small">${esc(TEAMS[p.team].short)}</span></span><b class="num">${g.pts+adj}</b><span class="why">${why.length?esc(why.join(' · ')):'No scoring events'}</span></div>`}).join('')
     +(sc[i].f10?`<div class="brow pwr"><span>🔥 Final 10′ (×2)</span><b class="num">${sign(sc[i].f10)}</b><span class="why">Points scored from the 80th minute count double</span></div>`:'')
+    +(sc[i].pen?`<div class="brow pwr"><span>⚽ Penalty shootout (×2)</span><b class="num">${sign(sc[i].pen)}</b><span class="why">Won the half-time shootout: points from 46′ to 50′ count double</span></div>`:'')
     +(sc[i].cap?`<div class="brow pwr"><span>Ⓒ Captain bonus (×1.5)</span><b class="num">${sign(sc[i].cap)}</b><span class="why">Half of the captain's points added on top</span></div>`:'')
     +S.powers.map((p,k)=>p.owner!==i?'':`<div class="brow pwr"><span>${POWER[p.type].icon} ${POWER[p.type].label}${p.target?' on '+esc(PL[p.target].name):''}</span><b class="num">${a.per[k]?sign(a.per[k]):'0'}</b><span class="why">Used at ${p.from}′ for ${POWER[p.type].dur} min${p.type==='neg'?(blockedNegs().has(p)?', blocked by a Shield':`, changed ${pname(1-i)==='You'?'your':esc(pname(1-i))+'\'s'} score`):''}</span></div>`).join('');
   app.innerHTML=`<section class="screen">
@@ -1873,6 +1937,7 @@ function viewResult(){
 function viewRules(){
   app.innerHTML=`<section class="screen"><div><div class="eyebrow">Rules</div><h2 style="font-size:2.4rem;text-transform:uppercase">How to play</h2></div>
     <div class="steps"><div><b>1</b><span>Pick a real match and choose 2 players. Your friend picks theirs.</span></div><div><b>2</b><span>Follow the match live. Every pass, shot, tackle and goal scores points.</span></div><div><b>3</b><span>Use power-ups and your swap at the right moment. Highest score wins.</span></div></div>
+    <div class="note"><b>⚽ Half-time penalties.</b> At half-time, take a penalty shootout. The winner scores ×2 for 5 minutes at the start of the 2nd half. If you don't play within 2 minutes, your opponent wins.</div>
     <div class="note"><b>🔥 Final 10′.</b> From the 80th minute every point counts double, and power-ups can no longer be used. Your swap still works.</div>
     <div class="rules">
       <h3>How points work</h3>
