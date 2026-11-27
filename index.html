@@ -309,7 +309,7 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .lrow .ln b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lrow .ln small{color:var(--muted);font-size:.72rem}
 .lrow .lw{font-family:var(--display);font-size:1.3rem;color:var(--accent)}
-.tabbar div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.tabbar div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
 .tabbar button{padding:6px 2px;border-radius:12px;font-weight:600;font-size:.68rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 .tabbar svg{width:22px;height:22px}
 .screen.enter{animation:enter .32s cubic-bezier(.2,.8,.2,1)}
@@ -396,6 +396,14 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .resume{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#12302d;border:1px solid var(--accent);border-radius:16px;padding:12px 14px;width:100%;text-align:left}
 .resume b{display:block}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted)}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;cursor:pointer}
+.setrow b{display:block;font-weight:600}
+.setrow small{display:block;color:var(--muted);font-size:.78rem}
+.setrow.dim{opacity:.45}
+.sw{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);position:relative;cursor:pointer;transition:background .2s;margin:0}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}
+.sw:checked{background:var(--accent);border-color:var(--accent)}
+.sw:checked::after{transform:translateX(18px);background:var(--accent-ink)}
 .toggle input{accent-color:var(--accent);width:18px;height:18px}
 .spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:0 auto}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -478,9 +486,11 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
     <button id="tab-ranking" data-tab="ranking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21V11h8v10M3 21v-6h5M16 21v-8h5v8M2 21h20"/></svg>Ranking</button>
     <button id="tab-profile" data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</button>
     <button id="tab-rules" data-tab="rules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h4"/></svg>Rules</button>
+    <button id="tab-settings" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</button>
   </div>
 </nav>
 <div class="splash" id="splash" aria-hidden="true"><div class="sp-ball"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="sbbg" cx="30%" cy="20%" r="95%"><stop offset="0" stop-color="#13283d"/><stop offset="1" stop-color="#08111e"/></radialGradient><linearGradient id="sba" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ff7c8"/><stop offset="1" stop-color="#2fd48d"/></linearGradient><linearGradient id="sbb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7dff"/><stop offset="1" stop-color="#2a3fd6"/></linearGradient><clipPath id="sbc"><circle cx="256" cy="256" r="176"/></clipPath></defs><g transform="translate(256 256) scale(1) translate(-256 -256)"><g clip-path="url(#sbc)"><rect width="256" height="512" fill="url(#sba)"/><rect x="256" width="256" height="512" fill="url(#sbb)"/><path d="M256.0 188.0 L315.0 230.8 L292.4 300.2 L219.6 300.2 L197.0 230.8Z" fill="#08111e" stroke="#08111e" stroke-width="30" stroke-linejoin="round"/><line x1="256.0" y1="180.0" x2="256.0" y2="60.0" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="322.6" y1="228.4" x2="436.7" y2="191.3" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="297.1" y1="306.6" x2="367.7" y2="403.7" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="214.9" y1="306.6" x2="144.3" y2="403.7" stroke="#08111e" stroke-width="14" stroke-linecap="round"/><line x1="189.4" y1="228.4" x2="75.3" y2="191.3" stroke="#08111e" stroke-width="14" stroke-linecap="round"/></g><circle cx="256" cy="256" r="176" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="6"/><ellipse cx="200" cy="160" rx="60" ry="30" fill="#fff" opacity=".18" transform="rotate(-30 200 160)"/></g></svg></div><div class="sp-logo">FOOTBALL<br><span>LIVE</span> DUEL</div><div class="sp-bar"><i></i></div></div>
+<script src="/settings.js"></script>
 <script src="/premium.js"></script>
 <script>
 (function(){
@@ -583,7 +593,7 @@ function fxStatus(f){
   if(LIVE.has(f.status))return `<span class="fstat live">LIVE ${f.status==='HT'?'HT':(f.elapsed||'')+'′'}</span>`;
   if(FINAL.has(f.status))return `<span class="fstat ft">FT ${f.goals.home}–${f.goals.away}</span>`;
   if(['PST','CANC','ABD','AWD','WO'].includes(f.status))return `<span class="fstat">${f.status==='PST'?'Postponed':f.status==='CANC'?'Cancelled':'Abandoned'}</span>`;
-  return `<span class="fstat">${new Date(f.kickoff).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>`;
+  return `<span class="fstat">${new Date(f.kickoff).toLocaleTimeString(LOC(), {hour:'2-digit',minute:'2-digit'})}</span>`;
 }
 
 // ================= App state =================
@@ -638,16 +648,16 @@ function go(view){S.view=view;if(view==='live'&&S.reactEng!==S.eng){S.reactEng=S
   if(view==='home'&&S.mode==='online')S.names=store.get('fld.names',['You','Friend']);
   render();window.scrollTo(0,0);chatUI()}
 function render(){
-  const TABS=['home','friends','ranking','profile','rules'];
+  const TABS=['home','friends','ranking','profile','rules','settings'];
   tabbar.hidden=!TABS.includes(S.view);
   tabbar.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===S.view?'page':'false'));
-  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin,flip:viewFlip,lflip:viewLocalFlip,friends:viewFriends,ranking:viewRanking,rules:viewRules,onboard:viewOnboard})[S.view]();
+  ({home:viewHome,draft:viewDraft,pass:viewPass,reveal:viewReveal,live:viewLive,result:viewResult,profile:viewProfile,wait:viewWait,join:viewJoin,flip:viewFlip,lflip:viewLocalFlip,friends:viewFriends,ranking:viewRanking,rules:viewRules,settings:viewSettings,onboard:viewOnboard})[S.view]();
   const sc=app.querySelector('.screen');if(sc&&S.lastView!==S.view){sc.classList.add('enter')}S.lastView=S.view;
 }
 tabbar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{buzz(8);go(b.dataset.tab)});
 
 // ================= Home =================
-function dayChoices(){const t=new Date();return [-1,0,1,2].map(o=>{const d=new Date(t);d.setDate(t.getDate()+o);return {iso:isoDay(d),label:o===-1?'Yesterday':o===0?'Today':o===1?'Tomorrow':d.toLocaleDateString([], {weekday:'short',day:'numeric'})}})}
+function dayChoices(){const t=new Date();return [-1,0,1,2].map(o=>{const d=new Date(t);d.setDate(t.getDate()+o);return {iso:isoDay(d),label:o===-1?'Yesterday':o===0?'Today':o===1?'Tomorrow':d.toLocaleDateString(LOC(), {weekday:'short',day:'numeric'})}})}
 function loadFixtures(){
   const day=S.day||isoDay(new Date());
   S.fxLoading=true;S.fxErr=null;S.fixtures=null;
@@ -827,7 +837,7 @@ function viewDraft(){
   app.querySelectorAll('[data-capt]').forEach(b=>b.onclick=()=>{S.capt[i]=+b.dataset.capt;const y=window.scrollY;viewDraft();window.scrollTo(0,y)});
   app.querySelectorAll('.prow').forEach(b=>b.onclick=()=>{
     const id=b.dataset.p,k=mine.indexOf(id);
-    if(k>=0)mine.splice(k,1);else{if(mine.length>=2)mine.shift();mine.push(id)}
+    if(k>=0)mine.splice(k,1);else{if(mine.length>=2)mine.shift();mine.push(id);sfx('pick')}
     const y=window.scrollY;viewDraft();window.scrollTo(0,y);
   });
   const dr=document.getElementById('dare');
@@ -899,7 +909,7 @@ function viewLocalFlip(){
     <p class="fliptxt" id="fliptxt">Flipping…</p>
     <button class="btn" id="lgo" style="visibility:hidden">Start the draft</button>
   </section>`;
-  buzz(20);
+  buzz(20);sfx('flip');
   setTimeout(()=>{const t=document.getElementById('fliptxt');if(!t||S.view!=='lflip')return;buzz([60,40,60]);
     t.innerHTML=`<b>${esc(nm(first))} won the toss!</b><br>${esc(nm(first))} picks first, then you take turns.`;t.classList.add('show');
     const g=document.getElementById('lgo');g.style.visibility='visible';g.textContent=`${nm(first)}, start picking`;g.onclick=()=>go('draft')},2300);
@@ -941,7 +951,7 @@ function viewDraftLocal(){
   const un=document.getElementById('undo');if(un)un.onclick=()=>{const x=d.order.pop();if(x)S.picks[x.s]=S.picks[x.s].filter(id=>id!==x.id);viewDraft()};
   app.querySelectorAll('.prow').forEach(b=>b.onclick=()=>{
     if(turn<0||by[b.dataset.p]!=null)return;
-    d.order.push({s:turn,id:b.dataset.p});S.picks[turn].push(b.dataset.p);buzz(25);S.filter='all';
+    d.order.push({s:turn,id:b.dataset.p});S.picks[turn].push(b.dataset.p);buzz(25);sfx('pick');S.filter='all';
     const next=d.order.length<4?order[d.order.length]:-1;
     if(next>=0){passOverlay(next)}viewDraft();window.scrollTo(0,0)});
   app.querySelectorAll('textarea[data-di]').forEach(t=>t.oninput=()=>{S.dares[+t.dataset.di]=t.value.trim()});
@@ -984,7 +994,7 @@ function mstrip(){
   const f=S.fixture,E=S.eng,c=E?E.clock():null,t=E?E.tally():null;
   const g=t?[t.hs,t.as]:['',''];
   return `<div class="mstrip"><div class="tm"><span>${esc(TEAMS[f.home].name)}</span><b class="g">${g[0]}</b></div>
-    <div class="ck"><b>${c?esc(c.min):LIVE.has(f.status)?(f.status==='HT'?'HT':(f.elapsed||'')+'′'):new Date(f.kickoff||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</b><span class="${(c&&c.live)||(!c&&LIVE.has(f.status))?'live':''}">${(c&&c.live)||(!c&&LIVE.has(f.status))?'<i class="dot"></i>':''}${c?esc(c.status):LIVE.has(f.status)?'Live':'Kickoff'}</span></div>
+    <div class="ck"><b>${c?esc(c.min):LIVE.has(f.status)?(f.status==='HT'?'HT':(f.elapsed||'')+'′'):new Date(f.kickoff||Date.now()).toLocaleTimeString(LOC(), {hour:'2-digit',minute:'2-digit'})}</b><span class="${(c&&c.live)||(!c&&LIVE.has(f.status))?'live':''}">${(c&&c.live)||(!c&&LIVE.has(f.status))?'<i class="dot"></i>':''}${c?esc(c.status):LIVE.has(f.status)?'Live':'Kickoff'}</span></div>
     <div class="tm r"><b class="g">${g[1]}</b><span>${esc(TEAMS[f.away].name)}</span></div></div>`;
 }
 function duelPanel(live){
@@ -1326,7 +1336,7 @@ function viewFlip(){
     <div class="coinwrap"><div class="coin ${first===0?'h':'t'}" id="coin"><div class="face f0"><span>${esc(nm(0).slice(0,1).toUpperCase())}</span></div><div class="face f1"><span>${esc(nm(1).slice(0,1).toUpperCase())}</span></div></div></div>
     <p class="fliptxt" id="fliptxt">Flipping…</p>
   </section>`;
-  buzz(20);
+  buzz(20);sfx('flip');
   setTimeout(()=>{const t=document.getElementById('fliptxt');if(!t)return;buzz([60,40,60]);
     t.innerHTML=first===me?'<b>You won the toss!</b><br>You pick first.':`<b>${esc(nm(first))} won the toss.</b><br>They pick first, you pick second.`;t.classList.add('show')},2300);
   setTimeout(()=>{if(S.view==='flip'){S.flipDone=true;S.turn=me;go('draft')}},4300);
@@ -1427,7 +1437,7 @@ function gotChat(list){
   if(S.chatOpen)return;
   o.unread=(o.unread||0)+fresh.length;
   const m=fresh[fresh.length-1],who=pname(m.s);
-  if(m.e)burst(m.t,who);else toast(`💬 ${who}: ${m.t.slice(0,60)}`);
+  sfx('msg');if(m.e)burst(m.t,who);else toast(`💬 ${who}: ${m.t.slice(0,60)}`);
 }
 // Full-screen moments: goals, power-ups, Final 10'
 function fx(kind,o){o=o||{};if(S.view!=='live')return;
@@ -1435,8 +1445,8 @@ function fx(kind,o){o=o||{};if(S.view!=='live')return;
   const big=document.createElement('div');big.className='fx-big';const sub=document.createElement('div');sub.className='fx-sub';
   if(kind==='goal'){big.textContent='GOAL!';sub.textContent=o.text||'';
     for(let n=0;n<26;n++){const c=document.createElement('i');c.className='conf';c.style.left=(Math.random()*100)+'%';c.style.background=['var(--accent)','var(--gold)','#fff','#6fb6ff'][n%4];c.style.animationDelay=(Math.random()*.35)+'s';c.style.setProperty('--dx',(Math.random()*120-60)+'px');d.appendChild(c)}}
-  else if(kind==='power'){const P=POWER[o.type];big.textContent=P.icon;sub.textContent=`${pname(o.owner)} · ${P.label}${o.target&&PL[o.target]?' on '+PL[o.target].name:''}`}
-  else if(kind==='f10'){big.textContent='🔥 FINAL 10′';sub.textContent='Every point ×2 · power-ups locked'}
+  else if(kind==='power'){sfx('power');const P=POWER[o.type];big.textContent=P.icon;sub.textContent=`${pname(o.owner)} · ${P.label}${o.target&&PL[o.target]?' on '+PL[o.target].name:''}`}
+  else if(kind==='f10'){sfx('whistle');big.textContent='🔥 FINAL 10′';sub.textContent='Every point ×2 · power-ups locked'}
   d.prepend(big);d.appendChild(sub);document.body.appendChild(d);setTimeout(()=>d.remove(),kind==='goal'?2400:1800);
   if(kind==='goal'||kind==='f10'){const a=document.getElementById('app');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake')}
 }
@@ -1475,7 +1485,7 @@ function drawChat(scroll){
   sh.querySelector('#cmute').textContent=muted?'Unmute':'Mute';
   const list=(S.online.chat||[]).filter(m=>!muted||m.s===S.online.slot);
   const box=sh.querySelector('#clist');const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
-  box.innerHTML=list.length?list.map(m=>`<div class="msg ${m.s===S.online.slot?'me':''} ${m.e?'big':''}">${esc(m.t)}${m.e?'':`<small>${new Date(m.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small>`}</div>`).join('')
+  box.innerHTML=list.length?list.map(m=>`<div data-noi18n class="msg ${m.s===S.online.slot?'me':''} ${m.e?'big':''}">${esc(m.t)}${m.e?'':`<small>${new Date(m.at).toLocaleTimeString(LOC(), {hour:'2-digit',minute:'2-digit'})}</small>`}</div>`).join('')
     :`<p class="small muted" style="text-align:center;margin:auto">${muted?`You muted ${esc(other)}.`:'Talk trash, celebrate goals. Only you and '+esc(other)+' see this.'}</p>`;
   if(scroll||atBottom)box.scrollTop=box.scrollHeight;
 }
@@ -1655,7 +1665,7 @@ function realEngine(f,replay,start){
       if(E.replay&&!E.final)return {min:E.cursor+'′',status:S.paused?'Paused':E.cursor===45&&E.htWait>0?'Half time':'Replay',live:!S.paused};
       const st=E.status;
       const status=LIVE.has(st)?(st==='HT'?'Half time':st==='ET'?'Extra time':st==='P'?'Penalties':'Live'):FINAL.has(st)?'Full time':st==='NS'||st==='TBD'?'Not started':st;
-      return {min:LIVE.has(st)?(st==='HT'?'HT':(E.elapsed||0)+'′'):FINAL.has(st)?'FT':new Date(f.kickoff).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),status,live:LIVE.has(st)&&st!=='HT'};
+      return {min:LIVE.has(st)?(st==='HT'?'HT':(E.elapsed||0)+'′'):FINAL.has(st)?'FT':new Date(f.kickoff).toLocaleTimeString(LOC(), {hour:'2-digit',minute:'2-digit'}),status,live:LIVE.has(st)&&st!=='HT'};
     },
     htWait:0,
     tick(){ // replay only
@@ -1822,6 +1832,7 @@ function updateLive(before){
 function viewResult(){
   const f=S.fixture,E=S.eng,t=E.tally(),a=powerAdjust(),tot=totals();
   const w=tot[0]>tot[1]?0:tot[1]>tot[0]?1:-1;
+  if(S.resSndFor!==E){S.resSndFor=E;const me=S.mode==='online'&&S.online?S.online.slot:0;sfx(w<0?'draw':(w===me||S.mode==='friend')?'win':'lose')}
   const sc=[0,1].map(i=>sideScore(i,t,a));
   const lines=i=>sc[i].rows.map((g,n)=>{const p=PL[g.id];const first=sc[i].rows.findIndex(r=>r.id===g.id)===n;const adj=first?sc[i].adjOf(g.id):0;
     let why;if(!g.startKeys&&!g.endKeys){why=E.why(g.id);if(adj)why.push(`power-ups ${sign(adj)}`)}else why=[];
@@ -1971,16 +1982,9 @@ async function openFriendLink(code){
 
 // ================= App feel: splash, onboarding, haptics, sound =================
 function buzz(ms){try{if(store.get('fld.vib',true)&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
-let actx=null;
-function goalSound(){
-  if(!store.get('fld.sound',true))return;
-  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t=actx.currentTime;
-    // Short stadium-horn style chime: three rising notes plus a soft crowd noise burst
-    [523.25,659.25,783.99].forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.09);g.gain.linearRampToValueAtTime(.18,t+i*.09+.02);g.gain.exponentialRampToValueAtTime(.001,t+i*.09+.5);o.connect(g).connect(actx.destination);o.start(t+i*.09);o.stop(t+i*.09+.55)});
-    const n=actx.createBufferSource(),buf=actx.createBuffer(1,actx.sampleRate*1.2,actx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.min(1,i/4000)*(1-i/d.length);
-    const bp=actx.createBiquadFilter(),g2=actx.createGain();bp.type='bandpass';bp.frequency.value=900;g2.gain.value=.08;n.buffer=buf;n.connect(bp).connect(g2).connect(actx.destination);n.start(t+.05);
-  }catch(e){}
-}
+function goalSound(){sfx('goal')}
+function LOC(){try{return window.FLDSettings?FLDSettings.lang():undefined}catch(e){return undefined}}
+function sfx(n){try{window.FLDSettings&&FLDSettings.sfx(n)}catch(e){}}
 // Goal / power-up reactions while watching: compare with what was already shown
 function reactToFeed(){
   const E=S.eng;if(!E||!E.shown)return;
@@ -2151,6 +2155,28 @@ function bindAccount(){
       S.names=['You','Friend'];S.history=[];S.league=null;S.acct={};toast('Your account and data are deleted');S.view='onboard';S.obStep=0;render()}
     catch(x){toast(x.message);A.sure=0;rerenderAccount()}};
 }
+// ================= Settings: language, music, sound effects, vibration =================
+function viewSettings(){
+  const FS=window.FLDSettings,o=FS?FS.opt():{all:false,music:true,sfx:true},L=FS?FS.lang():'en',vib=store.get('fld.vib',true);
+  const tg=(id,on,title,sub,dis)=>`<label class="setrow${dis?' dim':''}"><span><b>${title}</b>${sub?`<small>${sub}</small>`:''}</span><input type="checkbox" class="sw" id="${id}" ${on?'checked':''}></label>`;
+  const lb=(c,flag,name)=>`<button data-lang="${c}" aria-pressed="${L===c}" data-noi18n style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.85rem"><span style="font-size:1.4rem;line-height:1">${flag}</span>${name}</button>`;
+  app.innerHTML=`<section class="screen">
+    <h2 style="font-size:2.4rem;text-transform:uppercase">Settings</h2>
+    <div class="lg"><h3>Language</h3><div class="seg" style="grid-template-columns:repeat(3,1fr)">${lb('fr','🇫🇷','Français')}${lb('en','🇬🇧','English')}${lb('es','🇪🇸','Español')}</div></div>
+    <div class="lg"><h3>Sound</h3>
+      ${tg('s-all',o.all,'Mute everything','Turns off music and sound effects')}
+      ${tg('s-music',o.music,'Music','Background music, like in games',o.all)}
+      ${tg('s-sfx',o.sfx,'Sound effects','Goals, picks, power-ups and taps',o.all)}
+      ${tg('s-vib',vib,'Vibration','Vibrate on goals and power-ups')}
+    </div>
+  </section>`;
+  app.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{if(FS)FS.setLang(b.dataset.lang);viewSettings()});
+  const on=(id,f)=>{document.getElementById(id).onchange=e=>{f(e.target.checked);viewSettings()}};
+  on('s-all',v=>FS&&FS.setOpt('all',v));
+  on('s-music',v=>FS&&FS.setOpt('music',v));
+  on('s-sfx',v=>{FS&&FS.setOpt('sfx',v);if(v)sfx('pick')});
+  on('s-vib',v=>{store.set('fld.vib',v);if(v)buzz(40)});
+}
 let gsiP=null;
 function loadGoogle(){return gsiP||(gsiP=new Promise(ok=>{if(window.google&&google.accounts)return ok(google);const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>ok(window.google);s.onerror=()=>{gsiP=null;ok(null)};document.head.appendChild(s)}))}
 function viewProfile(){
@@ -2162,18 +2188,16 @@ function viewProfile(){
     <div id="plan"></div>
     ${accountHtml()}
     <div id="badges">${badgesHtml()}</div>
-    <div class="lg"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="snd" ${store.get('fld.sound',true)?'checked':''}> Goal sound</label><label class="toggle"><input type="checkbox" id="vib" ${store.get('fld.vib',true)?'checked':''}> Vibrate on goals and power-ups</label><button class="linkbtn" id="rename" style="text-align:left;padding:0">Change your player name</button></div>
+    <button class="linkbtn" id="rename" style="text-align:left;padding:0">Change your player name</button>
     <div class="section-title"><h2 style="font-size:1.2rem">Recent duels</h2><span class="small muted">${store.get('fld.acct',null)?'Saved in your account':'Saved on this phone'}</span></div>
     <div class="hist">${h.length?h.map(x=>{const tm=x.teams||['',''];return `<div class="hrow"><span class="res ${x.out}">${x.out}</span>
-      <div style="min-width:0"><b style="font-weight:600">vs ${esc(x.names[1])}</b><div class="small muted">${esc(tm[0])} ${x.score[0]}–${x.score[1]} ${esc(tm[1])} · ${x.real?'Real match':'Practice'} · ${new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</div></div>
+      <div style="min-width:0"><b style="font-weight:600">vs ${esc(x.names[1])}</b><div class="small muted">${esc(tm[0])} ${x.score[0]}–${x.score[1]} ${esc(tm[1])} · ${x.real?'Real match':'Practice'} · ${new Date(x.at).toLocaleDateString(LOC(),{day:'numeric',month:'short'})}</div></div>
       <b class="num" style="font-family:var(--display);font-size:1.3rem">${x.tot[0]}–${x.tot[1]}</b></div>`}).join('')
       :`<div class="empty">No duels yet. Pick a match on the Play tab to play your first one.</div>`}</div>
     ${h.length?'<button class="linkbtn" id="clear">Clear history</button>':''}
     <a class="linkbtn" href="/privacy.html">Privacy policy</a>
   </section>`;
   bindLeague();bindAccount();if(window.FLDPremium)FLDPremium.card();if(!S.leagueLoading&&(!S.league||Date.now()-S.leagueAt>20000))loadLeague();
-  document.getElementById('snd').onchange=e=>store.set('fld.sound',e.target.checked);
-  document.getElementById('vib').onchange=e=>store.set('fld.vib',e.target.checked);
   document.getElementById('rename').onclick=async()=>{const me=store.get('fld.me',null);const n=(prompt('Your player name',S.names[0])||'').trim().slice(0,14);if(!n)return;
     S.names[0]=n;const nm=store.get('fld.names',['You','Friend']);nm[0]=n;store.set('fld.names',nm);
     if(me){try{await leagueFetch({body:{action:'rename',id:me.id,token:me.token,name:n}});S.league=null}catch(e){toast(e.message)}}viewProfile()};
