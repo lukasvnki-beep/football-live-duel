@@ -456,29 +456,26 @@ h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;
 .pwpick>span{width:100%;color:var(--muted)}
 .tag{font-style:normal;display:inline-block;margin-left:4px;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:999px;vertical-align:1px}
 .pgrp{margin:12px 0 4px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.oboard{display:flex;flex-direction:column;gap:10px}
-.oscore{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:8px}
-.oscore small{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.oscore b{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1}
-.oscore .lead b{color:var(--accent)}.oscore>span{color:var(--muted);font-size:.75rem;font-weight:700}
-.obigs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.obig{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;background:radial-gradient(120% 80% at 50% 0%,rgba(124,199,255,.14),transparent 70%),var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px 8px 10px;min-width:0}
+.oboard{display:grid;grid-template-columns:1fr 1fr;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.ocol{display:flex;flex-direction:column;gap:8px;padding:10px 8px;min-width:0}
+.ocol+.ocol{border-left:1px solid var(--line)}
+.ohd{text-align:center;min-width:0}
+.ohd small{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ohd b{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1.05}
+.ohd b span{font-size:.8rem;color:var(--muted)}
+.ocol.lead .ohd b{color:var(--accent)}
+.obig{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;background:radial-gradient(120% 80% at 50% 0%,rgba(124,199,255,.12),transparent 70%),var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px 6px 8px;min-width:0}
 .obig.off{opacity:.6}
-.obig .shirt{width:92px;height:80px}
-.obig .nm{font-weight:800;font-size:.95rem;text-transform:uppercase;letter-spacing:.03em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9fd6ff}
-.obig .sub{font-size:.7rem;color:var(--muted)}
-.obig .opts{font-family:var(--display);font-weight:800;font-size:2.3rem;line-height:1.05}
-.obig .opts small{font-size:.9rem}
+.obig .shirt{width:56px;height:49px}
+.obig .nm{font-weight:800;font-size:.82rem;line-height:1.15;max-width:100%;overflow-wrap:anywhere;color:#9fd6ff}
+.obig .sub{font-size:.68rem;color:var(--muted)}
+.obig .opts{font-family:var(--display);font-weight:800;font-size:1.6rem;line-height:1.05}
+.obig .opts small{font-size:.7rem}
 .obig .tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
-.tradebtn{margin-top:6px;width:100%;border:0;border-radius:10px;padding:10px 4px;background:#7cc7ff;color:#06121f;font:inherit;font-weight:800;font-size:.9rem;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 3px 0 #3f8fc4;cursor:pointer}
+.tradebtn{margin-top:4px;width:100%;border:0;border-radius:10px;padding:8px 4px;background:#7cc7ff;color:#06121f;font:inherit;font-weight:800;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 3px 0 #3f8fc4;cursor:pointer}
 .tradebtn:disabled{opacity:.4;cursor:default}
-.ghost{margin-top:6px;font-size:.72rem;color:var(--muted);background:rgba(0,0,0,.2);border-radius:10px;padding:6px 8px;width:100%}
+.ghost{margin-top:4px;font-size:.68rem;color:var(--muted);background:rgba(0,0,0,.2);border-radius:10px;padding:5px 6px;width:100%}
 .ghost b{color:var(--text)}
-.oopp{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
-.omini{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
-.omini .shirt{width:28px;height:25px;flex:none}
-.omini b{display:block;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.omini small{font-size:.7rem;color:var(--muted)}
 .fhead{display:grid;grid-template-columns:1fr 46px 1fr;gap:6px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .fhead span:first-child{text-align:right}.fhead span:nth-child(2){text-align:center;color:#9fd6ff}
 .trlist{display:flex;flex-direction:column;gap:6px}
@@ -1148,24 +1145,22 @@ function duelPanel(live){
       </div>`}).join('');
     return `<div class="side ${lead===i?'lead':''}"><div class="sh"><div class="who"${multi()?` style="color:${PCOL[i]}"`:''}>${multi()&&live?['🥇','🥈','🥉','4.'][tot.filter(x=>x>tot[i]).length]+' ':''}${esc(pname(i))}</div><div class="tot num">${tot[i]<0?'−'+(-tot[i]):tot[i]}<small> pts</small></div></div>${cards}</div>`}).join('')}</div>`;
 }
-// Online 1v1 and vs the computer: your two players big, side by side, with their own points and a Trade button. Your opponent below.
+// Online 1v1 and vs the computer: mirror layout like the pregame. You on the left, your opponent on the right,
+// each with their total and their two players stacked. Only your side has Trade buttons.
 function onlineBoard(sc,tot,act,blk,ok,off,t){
   const E=S.eng,[L,R]=SIDES(),n=v=>v<0?'−'+(-v):v;
   const slot=(i,k)=>{const id=current(i)[k];if(!id)return null;const rows=sc[i].rows.filter(r=>r.k===k),ids=[...new Set(rows.map(r=>r.id))];
     const v=rows.reduce((x,r)=>x+r.pts,0)+ids.reduce((x,pid)=>x+sc[i].adjOf(pid),0);
     const tags=act.filter(x=>x.p.target===id&&!blk.has(x.p)&&(isBoost(x.p.type)?x.p.owner===i:x.p.owner!==i)).map(x=>`<i class="tag ${x.p.type}" data-noi18n>${isBoost(x.p.type)?POWER[x.p.type].tag:'FLIP'} ${x.left>POWER[x.p.type].dur?'⏳'+(x.left-POWER[x.p.type].dur):x.left}′</i>`).join('')+(boostOn(E)&&penWin()===i?`<i class="tag pen">⚽ ×2 ${PEN_FROM+PEN_DUR-nowMatchMin(E)}′</i>`:'');
     const w=(S.swaps||[]).find(x=>x.owner===i&&x.k===k);return {id,v,tags,w}};
-  const big=k=>{const x=slot(L,k);if(!x)return '<div></div>';const p=PL[x.id],o=off.has(x.id);
+  const card=(i,k)=>{const x=slot(i,k);if(!x)return '';const p=PL[x.id],o=off.has(x.id),me=i===L;
     return `<div class="obig ${o?'off':''}">${shirt(x.id)}<b class="nm">${esc(p.name)}</b><span class="sub">${p.pos||'–'} · ${esc(TEAMS[p.team].short)}${o?' · sent off':''}</span>
       <div class="opts num">${n(x.v)} <small>PTS</small></div>${x.tags?`<div class="tags">${x.tags}</div>`:''}
       ${x.w?`<div class="ghost">⇄ <b data-noi18n>${esc(PL[x.w.out].name)}</b> <span>since the trade</span> <b class="num" data-noi18n>${(g=>g<0?'−'+(-g):'+'+g)(ghostPts(x.w,t))}</b></div>`
-        :!E.final?`<button class="tradebtn" data-swap="${L}:${k}" ${ok&&!swapUsed(L)?'':'disabled'}>${swapUsed(L)?'Trade used':'Trade'}</button>`:''}</div>`};
-  const mini=k=>{const x=slot(R,k);if(!x)return '';return `<span class="omini">${shirt(x.id)}<span><b>${esc(PL[x.id].name)}</b><small class="num">${n(x.v)} pts${x.w?' · ⇄':''}</small></span>${x.tags}</span>`};
+        :me&&!E.final?`<button class="tradebtn" data-swap="${L}:${k}" ${ok&&!swapUsed(L)?'':'disabled'}>${swapUsed(L)?'Trade used':'Trade'}</button>`:''}</div>`};
   const lead=tot[L]>tot[R]?L:tot[R]>tot[L]?R:-1;
-  return `<div class="oboard">
-    <div class="oscore"><div class="${lead===L?'lead':''}"><small>${esc(pname(L))}</small><b class="num">${n(tot[L])}</b></div><span>pts</span><div class="${lead===R?'lead':''}"><small>${esc(pname(R))}</small><b class="num">${n(tot[R])}</b></div></div>
-    <div class="obigs">${big(0)}${big(1)}</div>
-    <div class="oopp"><span class="small muted">${esc(pname(R))}</span>${mini(0)}${mini(1)}</div></div>`;
+  const col=i=>`<div class="ocol ${lead===i?'lead':''}"><div class="ohd"><small>${esc(pname(i))}</small><b class="num tot">${n(tot[i])}<span> pts</span></b></div>${card(i,0)}${card(i,1)}</div>`;
+  return `<div class="oboard duel">${col(L)}${col(R)}</div>`;
 }
 function pbar(){
   const E=S.eng,act=activePowers(),blk=blockedNegs(),sd=SIDES(),[L,R]=sd;
@@ -2108,16 +2103,16 @@ function updateLive(before){
   const cell=(e,i,cls)=>{const v=e.type==='power'||e.type==='swap'?null:sideEvPts(i,e)*evMult(i,e);const [h,w]=evShort(e,i);
     return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
   const onl=(S.mode==='online'||S.mode==='cpu')&&!multi();
-  if(onl){const segs=segsOf(L),kOf=e=>{const g=segs.find(g=>e.pts&&e.pts[g.id]&&segHas(g,e));return g?g.k:-1};
-    const nmK=k=>{const id=current(L)[k];return id?esc(PL[id].name):''};
-    const rows=ev.filter(e=>e.type!=='stats'||kOf(e)>=0).map(e=>{const mc=`<span class="mc">${esc(String(e.lbl||'').replace('′',''))}′</span>`;
-      const k=(e.type==='power'||e.type==='swap')?-1:kOf(e);
-      if(k<0){const [h,w]=evShort(e,null);const v=e.type==='power'||e.type==='swap'?0:sideEvPts(R,e)*evMult(R,e);const who=e.type==='power'||e.type==='swap'?`<span class="chip p${e.owner+1}">${esc(pname(e.owner))}</span>`:v?`<span class="chip p${R+1}">${esc(pname(R))} ${sign(v)}</span>`:'';
-        return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}${who?'<div class="mchips">'+who+'</div>':''}</div></div>`}
-      const g=segs.find(g=>g.k===k&&e.pts[g.id]&&segHas(g,e)),v=e.pts[g.id]*evMult(L,e);const [h,w]=evShort(e,L);
-      const c=cls=>`<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span><span class="pt ${v>0?'p':'n'}">${sign(v)}</span></div>`;
-      return `<div class="tr ${e.type==='var'?'void':''}">${k===0?c('l'):'<span></span>'}${mc}${k===1?c('r'):'<span></span>'}</div>`});
-    setHTML(document.getElementById('feed'),(rows.length?`<div class="fhead"><span>${nmK(0)}</span><span>Feed</span><span>${nmK(1)}</span></div>`+rows.join(''):`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':'Waiting for kickoff. Your players\' actions will show up here.'}</div>`));
+  if(onl){
+    // Mirror feed: your players' actions on the left, your opponent's on the right, everything else in the middle
+    const rows=ev.map(e=>{const mc=`<span class="mc">${esc(String(e.lbl||'').replace('′',''))}′</span>`;
+      const pw=e.type==='power'||e.type==='swap';
+      const vs=[L,R].map(i=>pw?(e.owner===i?null:0):sideEvPts(i,e)*evMult(i,e));
+      const c=(i,v,cls)=>{const [h,w]=evShort(e,i);return `<div class="c ${cls}"><b>${h}</b><span class="who">${w}</span>${v?`<span class="pt ${v>0?'p':'n'}">${sign(v)}</span>`:''}</div>`};
+      if(!vs[0]&&vs[0]!==null&&!vs[1]&&vs[1]!==null){const [h,w]=evShort(e,null);return `<div class="tr neu ${e.type==='var'?'void':''}"><span></span>${mc}<span></span><div class="c mid">${h}${w?' · '+w:''}</div></div>`}
+      const on=v=>v===null||!!v;
+      return `<div class="tr ${e.type==='var'?'void':''}">${on(vs[0])?c(L,vs[0],'l'):'<span></span>'}${mc}${on(vs[1])?c(R,vs[1],'r'):'<span></span>'}</div>`});
+    setHTML(document.getElementById('feed'),(rows.length?`<div class="fhead"><span>${esc(pname(L))}</span><span>Feed</span><span>${esc(pname(R))}</span></div>`+rows.join(''):`<div class="empty">${E.kind==='real'&&!E.data?'Loading the match…':'Waiting for kickoff. Your players\' actions will show up here.'}</div>`));
   }else
   setHTML(document.getElementById('feed'),ev.length?ev.map(e=>{
     let on=ALL().map(i=>(e.type==='power'||e.type==='swap')?e.owner===i:!!sideEvPts(i,e));
